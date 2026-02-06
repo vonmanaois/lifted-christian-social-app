@@ -12,9 +12,10 @@ type Tab = (typeof tabs)[number];
 
 type ProfileTabsProps = {
   userId: string;
+  showComposer?: boolean;
 };
 
-export default function ProfileTabs({ userId }: ProfileTabsProps) {
+export default function ProfileTabs({ userId, showComposer = true }: ProfileTabsProps) {
   const [activeTab, setActiveTab] = useState<Tab>("My Prayers");
   const [refreshKey, setRefreshKey] = useState(0);
 
@@ -39,12 +40,16 @@ export default function ProfileTabs({ userId }: ProfileTabsProps) {
 
       {activeTab === "My Prayers" ? (
         <>
-          <PostForm compact onPosted={() => setRefreshKey((prev) => prev + 1)} />
+          {showComposer && (
+            <PostForm compact onPosted={() => setRefreshKey((prev) => prev + 1)} />
+          )}
           <PrayerFeed refreshKey={refreshKey} userId={userId} />
         </>
       ) : (
         <>
-          <WordForm compact onPosted={() => setRefreshKey((prev) => prev + 1)} />
+          {showComposer && (
+            <WordForm compact onPosted={() => setRefreshKey((prev) => prev + 1)} />
+          )}
           <WordFeed refreshKey={refreshKey} userId={userId} />
         </>
       )}

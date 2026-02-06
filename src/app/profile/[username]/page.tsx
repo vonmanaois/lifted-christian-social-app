@@ -90,7 +90,7 @@ export default async function PublicProfilePage({
             </div>
           )}
 
-          <ProfileTabs userId={user._id.toString()} />
+          <ProfileTabs userId={user._id.toString()} showComposer={isSelf} />
         </div>
       </div>
     </main>
