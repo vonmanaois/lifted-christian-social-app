@@ -447,21 +447,32 @@ export default function PrayerCard({ prayer }: PrayerCardProps) {
   return (
     <article className="wall-card flex gap-4 rounded-none">
       <div className="avatar-ring">
-        <div className="avatar-core">
-          {prayer.isAnonymous ? (
+        {prayer.isAnonymous ? (
+          <div className="avatar-core">
             <UserCircle size={28} weight="regular" />
-          ) : prayer.user?.image ? (
-            <Image
-              src={prayer.user.image}
-              alt={prayer.user?.name ?? "User"}
-              width={48}
-              height={48}
-              className="h-full w-full rounded-full object-cover"
-            />
-          ) : (
-            (prayer.user?.name?.[0] ?? "U").toUpperCase()
-          )}
-        </div>
+          </div>
+        ) : (
+          <a
+            href={
+              prayer.user?.username
+                ? `/profile/${prayer.user.username}`
+                : "/profile"
+            }
+            className="avatar-core cursor-pointer"
+          >
+            {prayer.user?.image ? (
+              <Image
+                src={prayer.user.image}
+                alt={prayer.user?.name ?? "User"}
+                width={48}
+                height={48}
+                className="h-full w-full rounded-full object-cover"
+              />
+            ) : (
+              (prayer.user?.name?.[0] ?? "U").toUpperCase()
+            )}
+          </a>
+        )}
       </div>
       <div className="flex-1">
         <div className="flex flex-wrap items-center justify-between gap-3">

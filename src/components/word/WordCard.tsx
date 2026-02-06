@@ -434,7 +434,12 @@ export default function WordCard({ word }: WordCardProps) {
   return (
     <article className="wall-card flex gap-4 rounded-none">
       <div className="avatar-ring">
-        <div className="avatar-core">
+        <a
+          href={
+            word.user?.username ? `/profile/${word.user.username}` : "/profile"
+          }
+          className="avatar-core cursor-pointer"
+        >
           {word.user?.image ? (
             <Image
               src={word.user.image}
@@ -446,7 +451,7 @@ export default function WordCard({ word }: WordCardProps) {
           ) : (
             (word.user?.name?.[0] ?? "W").toUpperCase()
           )}
-        </div>
+        </a>
       </div>
       <div className="flex-1">
         <div className="flex flex-wrap items-center justify-between gap-3">

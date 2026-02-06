@@ -369,15 +369,15 @@ html[data-theme="midnight"] .switch-thumb {
   height: 52px;
   width: 52px;
   border-radius: 999px;
-  background: linear-gradient(135deg, var(--accent), #9b6cff);
-  padding: 2px;
+  background: transparent;
+  padding: 0;
 }
 
 .avatar-core {
   height: 100%;
   width: 100%;
   border-radius: 999px;
-  background: #f0f1f5;
+  background: var(--surface-strong);
   display: flex;
   align-items: center;
   justify-content: center;
