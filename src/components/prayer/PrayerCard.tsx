@@ -35,6 +35,7 @@ type PrayerCardProps = {
 };
 
 type CommentUser = {
+  _id?: string | null;
   name?: string | null;
   image?: string | null;
 };
@@ -94,6 +95,14 @@ export default function PrayerCard({ prayer }: PrayerCardProps) {
   const commentInputRef = useRef<HTMLTextAreaElement | null>(null);
   const commentButtonRef = useRef<HTMLButtonElement | null>(null);
   const [commentCount, setCommentCount] = useState(prayer.commentCount ?? 0);
+  const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
+  const [editingCommentText, setEditingCommentText] = useState("");
+  const [editingCommentOriginal, setEditingCommentOriginal] = useState("");
+  const [showCommentEditConfirm, setShowCommentEditConfirm] = useState(false);
+  const [commentMenuId, setCommentMenuId] = useState<string | null>(null);
+  const [showCommentDeleteConfirm, setShowCommentDeleteConfirm] = useState(false);
+  const [pendingDeleteCommentId, setPendingDeleteCommentId] = useState<string | null>(null);
+  const commentEditRef = useRef<HTMLDivElement | null>(null);
   const [showMenu, setShowMenu] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showEditConfirm, setShowEditConfirm] = useState(false);
@@ -129,10 +138,10 @@ export default function PrayerCard({ prayer }: PrayerCardProps) {
   });
 
   useEffect(() => {
-    if (showComments) {
+    if (showComments && !isLoadingComments) {
       setCommentCount(comments.length);
     }
-  }, [comments.length, showComments]);
+  }, [comments.length, showComments, isLoadingComments]);
 
   useEffect(() => {
     if (!session?.user?.id) return;
@@ -168,6 +177,23 @@ export default function PrayerCard({ prayer }: PrayerCardProps) {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [isEditing, editText, content]);
 
+  useEffect(() => {
+    if (!editingCommentId) return;
+    const handleClickOutside = (event: MouseEvent) => {
+      if (!commentEditRef.current) return;
+      if (commentEditRef.current.contains(event.target as Node)) return;
+      if (editingCommentText.trim() !== editingCommentOriginal.trim()) {
+        setShowCommentEditConfirm(true);
+      } else {
+        setEditingCommentId(null);
+        setEditingCommentText("");
+        setEditingCommentOriginal("");
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [editingCommentId, editingCommentText, editingCommentOriginal]);
+
   const commentMutation = useMutation({
     mutationFn: async () => {
       const response = await fetch("/api/comments", {
@@ -184,6 +210,42 @@ export default function PrayerCard({ prayer }: PrayerCardProps) {
     },
     onSuccess: async () => {
       setCommentText("");
+      await queryClient.invalidateQueries({
+        queryKey: ["prayer-comments", prayerId],
+      });
+    },
+  });
+
+  const commentEditMutation = useMutation({
+    mutationFn: async ({ id, content }: { id: string; content: string }) => {
+      const response = await fetch(`/api/comments/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ content }),
+      });
+      if (!response.ok) {
+        throw new Error("Failed to update comment");
+      }
+    },
+    onSuccess: async () => {
+      setEditingCommentId(null);
+      setEditingCommentText("");
+      await queryClient.invalidateQueries({
+        queryKey: ["prayer-comments", prayerId],
+      });
+    },
+  });
+
+  const commentDeleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const response = await fetch(`/api/comments/${id}`, {
+        method: "DELETE",
+      });
+      if (!response.ok) {
+        throw new Error("Failed to delete comment");
+      }
+    },
+    onSuccess: async () => {
       await queryClient.invalidateQueries({
         queryKey: ["prayer-comments", prayerId],
       });
@@ -534,7 +596,7 @@ export default function PrayerCard({ prayer }: PrayerCardProps) {
           <div ref={commentFormRef} className="mt-5 border-t border-slate-100 pt-4">
             <form onSubmit={handleCommentSubmit} className="flex flex-col gap-3">
               <textarea
-                className="soft-input comment-input min-h-[90px] text-sm"
+                className="soft-input comment-input min-h-[70px] text-sm"
                 placeholder="Write a comment..."
                 value={commentText}
                 ref={commentInputRef}
@@ -566,26 +628,121 @@ export default function PrayerCard({ prayer }: PrayerCardProps) {
               ) : comments.length === 0 ? (
                 <div className="text-[color:var(--subtle)]">No comments yet.</div>
               ) : (
-                comments.map((comment) => (
-                  <div key={comment._id} className="flex gap-3">
+                comments.map((comment, index) => {
+                  const commentOwnerId = comment.userId?._id
+                    ? String(comment.userId._id)
+                    : null;
+                  const isCommentOwner = Boolean(
+                    session?.user?.id && commentOwnerId === String(session.user.id)
+                  );
+
+                  return (
+                    <div
+                      key={comment._id}
+                      className={`flex gap-3 pt-3 ${
+                        index === 0 ? "" : "border-t border-[color:var(--panel-border)]"
+                      }`}
+                    >
                     <div className="h-9 w-9 rounded-full bg-slate-200 flex items-center justify-center text-xs font-semibold text-slate-500">
                       {(comment.userId?.name?.[0] ?? "U").toUpperCase()}
                     </div>
                     <div className="flex-1">
-                      <div className="flex items-center justify-between">
-                        <p className="text-xs font-semibold text-[color:var(--ink)]">
-                          {comment.userId?.name ?? "User"}
-                        </p>
-                        <p className="text-xs text-[color:var(--subtle)]">
-                          {new Date(comment.createdAt).toLocaleDateString()}
-                        </p>
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <div className="flex items-center gap-2">
+                          <p className="text-xs font-semibold text-[color:var(--ink)]">
+                            {comment.userId?.name ?? "User"}
+                          </p>
+                          <p className="text-xs text-[color:var(--subtle)]">
+                            {formatPostTime(comment.createdAt)}
+                          </p>
+                        </div>
+                        {isCommentOwner && (
+                          <div className="relative">
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setCommentMenuId((prev) =>
+                                  prev === comment._id ? null : comment._id
+                                )
+                              }
+                              className="h-7 w-7 rounded-full text-[color:var(--subtle)] hover:text-[color:var(--ink)] cursor-pointer"
+                              aria-label="Comment actions"
+                            >
+                              <DotsThreeOutline size={16} weight="regular" />
+                            </button>
+                            {commentMenuId === comment._id && (
+                              <div className="absolute right-0 top-8 z-10 min-w-[160px] rounded-xl border border-[color:var(--panel-border)] bg-[color:var(--menu)] p-2 shadow-lg">
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setEditingCommentId(comment._id);
+                                    setEditingCommentText(comment.content);
+                                    setEditingCommentOriginal(comment.content);
+                                    setCommentMenuId(null);
+                                  }}
+                                  className="mb-1 w-full rounded-lg px-3 py-2 text-left text-xs font-semibold text-[color:var(--ink)] hover:bg-[color:var(--surface)] whitespace-nowrap cursor-pointer"
+                                >
+                                  Edit
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setCommentMenuId(null);
+                                    setPendingDeleteCommentId(comment._id);
+                                    setShowCommentDeleteConfirm(true);
+                                  }}
+                                  className="w-full rounded-lg px-3 py-2 text-left text-xs font-semibold text-[color:var(--danger)] hover:bg-[color:var(--surface)] whitespace-nowrap cursor-pointer"
+                                >
+                                  Delete
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        )}
                       </div>
-                      <p className="mt-1 text-sm text-[color:var(--ink)]">
-                        {comment.content}
-                      </p>
+                      {editingCommentId === comment._id ? (
+                        <div ref={commentEditRef} className="mt-2 flex flex-col gap-2">
+                          <textarea
+                            className="soft-input comment-input min-h-[60px] text-sm"
+                            value={editingCommentText}
+                            onChange={(event) => setEditingCommentText(event.target.value)}
+                          />
+                          <div className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() =>
+                                commentEditMutation.mutate({
+                                  id: comment._id,
+                                  content: editingCommentText.trim(),
+                                })
+                              }
+                              className="rounded-lg px-3 py-2 text-xs font-semibold bg-[color:var(--accent)] text-white cursor-pointer"
+                              disabled={!editingCommentText.trim()}
+                            >
+                              Save
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setEditingCommentId(null);
+                                setEditingCommentText("");
+                                setEditingCommentOriginal("");
+                              }}
+                              className="rounded-lg px-3 py-2 text-xs font-semibold text-[color:var(--ink)] cursor-pointer"
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <p className="mt-1 text-sm text-[color:var(--ink)]">
+                          {comment.content}
+                        </p>
+                      )}
                     </div>
                   </div>
-                ))
+                  );
+                })
               )}
             </div>
           </div>
@@ -682,6 +839,69 @@ export default function PrayerCard({ prayer }: PrayerCardProps) {
               setCommentText("");
               setShowComments(false);
               setShowCommentConfirm(false);
+            }}
+            className="rounded-lg px-3 py-2 text-xs font-semibold text-white bg-[color:var(--danger)] cursor-pointer"
+          >
+            Discard
+          </button>
+        </div>
+      </Modal>
+
+      <Modal
+        title="Delete comment?"
+        isOpen={showCommentDeleteConfirm}
+        onClose={() => setShowCommentDeleteConfirm(false)}
+      >
+        <p className="text-sm text-[color:var(--subtle)]">
+          This will permanently delete your comment.
+        </p>
+        <div className="mt-5 flex items-center justify-end gap-2">
+          <button
+            type="button"
+            onClick={() => setShowCommentDeleteConfirm(false)}
+            className="rounded-lg px-3 py-2 text-xs font-semibold text-[color:var(--ink)] cursor-pointer"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={async () => {
+              if (pendingDeleteCommentId) {
+                await commentDeleteMutation.mutateAsync(pendingDeleteCommentId);
+              }
+              setShowCommentDeleteConfirm(false);
+              setPendingDeleteCommentId(null);
+            }}
+            className="rounded-lg px-3 py-2 text-xs font-semibold text-white bg-[color:var(--danger)] cursor-pointer"
+          >
+            Delete
+          </button>
+        </div>
+      </Modal>
+
+      <Modal
+        title="Discard changes?"
+        isOpen={showCommentEditConfirm}
+        onClose={() => setShowCommentEditConfirm(false)}
+      >
+        <p className="text-sm text-[color:var(--subtle)]">
+          You have unsaved comment changes. Discard them?
+        </p>
+        <div className="mt-5 flex items-center justify-end gap-2">
+          <button
+            type="button"
+            onClick={() => setShowCommentEditConfirm(false)}
+            className="rounded-lg px-3 py-2 text-xs font-semibold text-[color:var(--ink)] cursor-pointer"
+          >
+            Keep editing
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setEditingCommentId(null);
+              setEditingCommentText("");
+              setEditingCommentOriginal("");
+              setShowCommentEditConfirm(false);
             }}
             className="rounded-lg px-3 py-2 text-xs font-semibold text-white bg-[color:var(--danger)] cursor-pointer"
           >
