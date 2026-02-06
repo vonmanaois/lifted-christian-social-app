@@ -1,17 +1,66 @@
-# lifted-christian-social-app
+# Lifted — Christian Prayer Wall & Social Journal
 
-This is my personal project app with help of Codex AI.
+Lifted is a community-first web app for sharing prayer requests and daily words of encouragement. It blends a Threads/X-inspired feed with a gentle spiritual focus, plus profiles, comments, notifications, and theming.
 
-## Getting Started
+## Features
+- Prayer wall feed with anonymous posting
+- Pray counts (non-reversible) and comments
+- Word of the Day feed with likes and comments
+- Profile pages with username, bio, followers, and following
+- Theme preferences (Light, Dark, Midnight, Purple Rose)
+- Notifications for prayers, comments, and word interactions
+- Expiring prayers (7d, 30d) or Never
 
-First, run the development server:
+## Tech Stack
+- Next.js (App Router) + TypeScript
+- Tailwind CSS (custom design system in `globals.css`)
+- MongoDB Atlas + Mongoose
+- NextAuth.js (Google OAuth)
+- TanStack Query (client data fetching)
+- Phosphor Icons
 
+## Local Development
+
+1. Install dependencies
+```bash
+npm install
+```
+
+2. Create `.env.local` and add:
+```env
+MONGODB_URI=...
+NEXTAUTH_URL=http://localhost:3000
+NEXTAUTH_SECRET=...
+GOOGLE_CLIENT_ID=...
+GOOGLE_CLIENT_SECRET=...
+```
+
+3. Run the dev server
 ```bash
 npm run dev
 ```
 
-Open http://localhost:3000 with your browser to see the result.
+Open http://localhost:3000
 
-## About
+## Scripts
+- `npm run dev` — start dev server
+- `npm run build` — build for production
+- `npm run start` — start production server
 
-Built with Next.js (App Router), Tailwind CSS, MongoDB, and NextAuth.
+## Project Structure (high level)
+```
+src/
+  app/            # App Router pages + API routes
+  components/     # UI + feature components
+  lib/            # db + auth helpers
+  models/         # Mongoose models
+```
+
+## Roadmap
+- Mood tracker + journaling
+- Bible verse discovery
+- Enhanced notifications
+- Performance & accessibility polish
+
+## License
+This project is currently private and not licensed for redistribution.
