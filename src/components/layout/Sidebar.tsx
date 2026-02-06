@@ -231,7 +231,7 @@ export default function Sidebar() {
                     : note.type === "comment"
                       ? "commented on your prayer."
                       : note.type === "word_like"
-                        ? "prayed for your word."
+                        ? "liked your word."
                         : "commented on your word."}
                 </p>
                 {note.prayerId?.content && (

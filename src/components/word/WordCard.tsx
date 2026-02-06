@@ -146,7 +146,7 @@ export default function WordCard({ word }: WordCardProps) {
             disabled={isLiking}
             className="pill-button border border-slate-200 text-[color:var(--ink)] cursor-pointer"
           >
-            Pray · {likeCount}
+            Like · {likeCount}
           </button>
           <button
             type="button"

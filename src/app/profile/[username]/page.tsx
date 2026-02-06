@@ -4,41 +4,47 @@ import { authOptions } from "@/lib/auth";
 import dbConnect from "@/lib/db";
 import PrayerModel from "@/models/Prayer";
 import UserModel from "@/models/User";
-import ProfileSettings from "@/components/profile/ProfileSettings";
 import Sidebar from "@/components/layout/Sidebar";
 import ProfileTabs from "@/components/profile/ProfileTabs";
+import FollowButton from "@/components/profile/FollowButton";
 
-export default async function ProfilePage() {
+export default async function PublicProfilePage({
+  params,
+}: {
+  params: { username: string };
+}) {
   const session = await getServerSession(authOptions);
-
-  if (!session?.user?.id) {
-    redirect("/");
-  }
 
   await dbConnect();
 
-  const user = await UserModel.findById(session.user.id).lean();
+  const user = await UserModel.findOne({ username: params.username }).lean();
+
+  if (!user) {
+    redirect("/");
+  }
+
   const prayedCount = await PrayerModel.countDocuments({
-    prayedBy: session.user.id,
+    prayedBy: user._id,
   });
+
+  const isSelf = session?.user?.id === user._id.toString();
+  const isFollowing = Boolean(
+    session?.user?.id &&
+      user.followers?.some((id) => id.toString() === session.user.id)
+  );
 
   return (
     <main className="container">
       <div className="page-grid">
         <Sidebar />
         <div className="panel p-8">
-          {!user?.username && (
-            <div className="mb-6">
-              <ProfileSettings required currentName={user?.name ?? null} />
-            </div>
-          )}
           <div className="flex flex-wrap items-center justify-between gap-6">
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[color:var(--subtle)]">
                 Profile
               </p>
               <h1 className="mt-3 text-3xl text-[color:var(--ink)]">
-                {user?.name ?? session.user.name ?? "Your Name"}
+                {user?.name ?? "User"}
               </h1>
               <p className="mt-2 text-sm text-[color:var(--subtle)]">
                 @{user?.username ?? "username"}
@@ -49,15 +55,24 @@ export default async function ProfilePage() {
                 </p>
               )}
             </div>
-            <div className="h-24 w-24 rounded-full overflow-hidden border border-slate-200 bg-slate-200">
-              {user?.image || session.user.image ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={user?.image ?? session.user.image ?? ""}
-                  alt="Profile"
-                  className="h-full w-full object-cover"
+            <div className="flex items-center gap-4">
+              {!isSelf && (
+                <FollowButton
+                  targetUserId={user._id.toString()}
+                  initialFollowing={isFollowing}
+                  initialFollowersCount={user.followers?.length ?? 0}
                 />
-              ) : null}
+              )}
+              <div className="h-24 w-24 rounded-full overflow-hidden border border-slate-200 bg-slate-200">
+                {user?.image ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={user.image}
+                    alt="Profile"
+                    className="h-full w-full object-cover"
+                  />
+                ) : null}
+              </div>
             </div>
           </div>
 
@@ -88,22 +103,7 @@ export default async function ProfilePage() {
             </div>
           </div>
 
-          <div className="mt-6">
-            <details className="panel p-4">
-              <summary className="cursor-pointer text-sm font-semibold text-[color:var(--ink)]">
-                Update profile
-              </summary>
-              <div className="mt-4">
-                <ProfileSettings
-                  currentUsername={user?.username ?? null}
-                  currentName={user?.name ?? null}
-                  currentBio={user?.bio ?? null}
-                />
-              </div>
-            </details>
-          </div>
-
-          <ProfileTabs userId={session.user.id} />
+          <ProfileTabs userId={user._id.toString()} />
         </div>
       </div>
     </main>

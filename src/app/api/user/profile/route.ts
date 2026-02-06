@@ -16,6 +16,7 @@ export async function PATCH(req: Request) {
   const body = await req.json();
   const username = typeof body.username === "string" ? body.username.trim() : "";
   const name = typeof body.name === "string" ? body.name.trim() : "";
+  const bio = typeof body.bio === "string" ? body.bio.trim() : "";
 
   if (!usernameRegex.test(username)) {
     return NextResponse.json(
@@ -38,7 +39,8 @@ export async function PATCH(req: Request) {
   await UserModel.findByIdAndUpdate(session.user.id, {
     username,
     ...(name ? { name } : {}),
+    ...(bio ? { bio: bio.slice(0, 280) } : { bio: "" }),
   });
 
-  return NextResponse.json({ username, name: name || undefined });
+  return NextResponse.json({ username, name: name || undefined, bio });
 }

@@ -6,15 +6,18 @@ type ProfileSettingsProps = {
   currentUsername?: string | null;
   required?: boolean;
   currentName?: string | null;
+  currentBio?: string | null;
 };
 
 export default function ProfileSettings({
   currentUsername,
   required = false,
   currentName,
+  currentBio,
 }: ProfileSettingsProps) {
   const [name, setName] = useState(currentName ?? "");
   const [username, setUsername] = useState(currentUsername ?? "");
+  const [bio, setBio] = useState(currentBio ?? "");
   const [message, setMessage] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -27,7 +30,11 @@ export default function ProfileSettings({
       const response = await fetch("/api/user/profile", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username: username.trim(), name: name.trim() }),
+        body: JSON.stringify({
+          username: username.trim(),
+          name: name.trim(),
+          bio: bio.trim(),
+        }),
       });
 
       const data = (await response.json()) as { error?: string; username?: string };
@@ -57,6 +64,18 @@ export default function ProfileSettings({
         placeholder="Your name"
         value={name}
         onChange={(event) => setName(event.target.value)}
+      />
+      <div>
+        <p className="text-sm font-semibold text-[color:var(--ink)]">Bio</p>
+        <p className="text-xs text-[color:var(--subtle)]">
+          280 characters max.
+        </p>
+      </div>
+      <textarea
+        className="soft-input text-sm min-h-[90px]"
+        placeholder="Share a short bio..."
+        value={bio}
+        onChange={(event) => setBio(event.target.value)}
       />
       <div>
         <p className="text-sm font-semibold text-[color:var(--ink)]">

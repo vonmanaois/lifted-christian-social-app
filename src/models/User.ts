@@ -12,6 +12,9 @@ const UserSchema = new Schema(
       unique: true,
       sparse: true,
     },
+    bio: { type: String, trim: true, maxlength: 280 },
+    followers: [{ type: Schema.Types.ObjectId, ref: "User" }],
+    following: [{ type: Schema.Types.ObjectId, ref: "User" }],
     theme: {
       type: String,
       enum: ["light", "midnight", "purple-rose"],
