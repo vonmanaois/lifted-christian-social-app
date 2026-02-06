@@ -19,7 +19,7 @@ export default function PostForm({
   const { data: session } = useSession();
   const [content, setContent] = useState("");
   const [isAnonymous, setIsAnonymous] = useState(false);
-  const [expiresInDays, setExpiresInDays] = useState<7 | 30>(7);
+  const [expiresInDays, setExpiresInDays] = useState<7 | 30 | "never">(7);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const textAreaRef = useRef<HTMLTextAreaElement | null>(null);
 
@@ -122,7 +122,19 @@ export default function PostForm({
             />
             30d
           </label>
+          <label className="inline-flex items-center gap-2 cursor-pointer">
+            <input
+              type="radio"
+              name="expires"
+              checked={expiresInDays === "never"}
+              onChange={() => setExpiresInDays("never")}
+            />
+            Never
+          </label>
         </div>
+        <p className="text-xs text-[color:var(--subtle)]">
+          Expired prayers are removed and no longer viewable.
+        </p>
       </div>
 
       <div className="flex justify-end">

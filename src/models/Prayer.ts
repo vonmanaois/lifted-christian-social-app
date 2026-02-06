@@ -6,7 +6,7 @@ const PrayerSchema = new Schema(
     userId: { type: Schema.Types.ObjectId, ref: "User" },
     isAnonymous: { type: Boolean, default: false },
     prayedBy: [{ type: Schema.Types.ObjectId, ref: "User" }],
-    expiresAt: { type: Date, required: true },
+    expiresAt: { type: Date },
   },
   { timestamps: true }
 );

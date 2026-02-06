@@ -82,14 +82,18 @@ export async function POST(req: Request) {
   const body = await req.json();
   const content = typeof body.content === "string" ? body.content.trim() : "";
   const isAnonymous = Boolean(body.isAnonymous);
-  const expiresInDays = body.expiresInDays === 30 ? 30 : 7;
+  const expiresInDays =
+    body.expiresInDays === "never" ? "never" : body.expiresInDays === 30 ? 30 : 7;
 
   if (!content) {
     return NextResponse.json({ error: "Content is required" }, { status: 400 });
   }
 
-  const expiresAt = new Date();
-  expiresAt.setDate(expiresAt.getDate() + expiresInDays);
+  let expiresAt: Date | undefined;
+  if (expiresInDays !== "never") {
+    expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + expiresInDays);
+  }
 
   await dbConnect();
 
