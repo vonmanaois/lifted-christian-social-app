@@ -6,12 +6,18 @@ import CommentModel from "@/models/Comment";
 import PrayerModel from "@/models/Prayer";
 
 export async function GET(req: Request) {
+  const session = await getServerSession(authOptions);
   const { searchParams } = new URL(req.url);
   const userId = searchParams.get("userId");
 
   await dbConnect();
 
-  const filter = userId ? { userId } : {};
+  const isOwnerView = Boolean(session?.user?.id && userId && session.user.id === userId);
+  const filter = userId
+    ? isOwnerView
+      ? { userId }
+      : { userId, isAnonymous: false }
+    : {};
 
   const prayers = await PrayerModel.find(filter)
     .sort({ createdAt: -1 })
