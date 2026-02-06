@@ -9,7 +9,7 @@ type PrayerFeedProps = {
 };
 
 export default function PrayerFeed({ refreshKey, userId }: PrayerFeedProps) {
-  const { data: prayers = [], isLoading } = useQuery({
+  const { data: prayers = [], isLoading, isFetching } = useQuery({
     queryKey: ["prayers", userId, refreshKey],
     queryFn: async () => {
       const query = userId ? `?userId=${userId}` : "";
@@ -65,6 +65,11 @@ export default function PrayerFeed({ refreshKey, userId }: PrayerFeedProps) {
 
   return (
     <div className="flex flex-col">
+      {isFetching && (
+        <div className="mb-3 h-1 w-full overflow-hidden rounded-full bg-[color:var(--surface-strong)]">
+          <div className="h-full w-1/3 animate-pulse rounded-full bg-[color:var(--accent)]/70" />
+        </div>
+      )}
       {prayers.map((prayer) => (
         <PrayerCard key={prayer._id} prayer={prayer} />
       ))}

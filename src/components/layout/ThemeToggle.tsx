@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTheme } from "next-themes";
 import { useSession } from "next-auth/react";
 
@@ -16,6 +16,7 @@ export default function ThemeToggle() {
   const { data: session } = useSession();
   const [mounted, setMounted] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
+  const lastRequestedTheme = useRef<string | null>(null);
 
   useEffect(() => setMounted(true), []);
 
@@ -26,7 +27,7 @@ export default function ThemeToggle() {
         const response = await fetch("/api/user/theme", { cache: "no-store" });
         if (!response.ok) return;
         const data = (await response.json()) as { theme?: string };
-        if (data.theme) {
+        if (data.theme && data.theme !== theme && data.theme !== lastRequestedTheme.current) {
           setTheme(data.theme);
         }
       } catch (error) {
@@ -38,6 +39,7 @@ export default function ThemeToggle() {
   }, [session?.user?.id, setTheme]);
 
   const handleThemeChange = async (value: string) => {
+    lastRequestedTheme.current = value;
     setTheme(value);
 
     if (!session?.user?.id) return;
@@ -66,19 +68,32 @@ export default function ThemeToggle() {
       <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[color:var(--subtle)]">
         Theme
       </p>
-      <div className="flex flex-wrap gap-2">
+      <div className="flex flex-col gap-2">
         {themes.map((item) => (
           <button
             key={item.value}
             type="button"
             onClick={() => handleThemeChange(item.value)}
-            className={`pill-button border text-xs cursor-pointer ${
+            className={`flex items-center justify-between rounded-xl border px-3 py-2 text-sm transition cursor-pointer ${
               theme === item.value
                 ? "border-transparent bg-[color:var(--accent)] text-white"
-                : "border-slate-200 text-[color:var(--ink)]"
+                : "border-[color:var(--panel-border)] text-[color:var(--ink)] hover:border-[color:var(--accent)]"
             }`}
           >
-            {item.label}
+            <span className="font-semibold">{item.label}</span>
+            <span
+              className={`relative inline-flex h-5 w-10 items-center rounded-full transition ${
+                theme === item.value ? "bg-white/30" : "bg-[color:var(--surface-strong)]"
+              }`}
+            >
+              <span
+                className={`inline-block h-4 w-4 transform rounded-full transition ${
+                  theme === item.value
+                    ? "translate-x-5 bg-white"
+                    : "translate-x-1 bg-[color:var(--panel)]"
+                }`}
+              />
+            </span>
           </button>
         ))}
       </div>

@@ -18,7 +18,7 @@ type WordFeedProps = {
 };
 
 export default function WordFeed({ refreshKey, userId }: WordFeedProps) {
-  const { data: words = [], isLoading } = useQuery({
+  const { data: words = [], isLoading, isFetching } = useQuery({
     queryKey: ["words", userId, refreshKey],
     queryFn: async () => {
       const query = userId ? `?userId=${userId}` : "";
@@ -71,6 +71,11 @@ export default function WordFeed({ refreshKey, userId }: WordFeedProps) {
 
   return (
     <div className="flex flex-col">
+      {isFetching && (
+        <div className="mb-3 h-1 w-full overflow-hidden rounded-full bg-[color:var(--surface-strong)]">
+          <div className="h-full w-1/3 animate-pulse rounded-full bg-[color:var(--accent)]/70" />
+        </div>
+      )}
       {words.map((word) => (
         <WordCard key={word._id} word={word} />
       ))}

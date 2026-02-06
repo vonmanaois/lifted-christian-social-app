@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { signIn, useSession } from "next-auth/react";
 
 type WordFormProps = {
@@ -19,6 +19,15 @@ export default function WordForm({
   const { data: session } = useSession();
   const [content, setContent] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const textAreaRef = useRef<HTMLTextAreaElement | null>(null);
+
+  useEffect(() => {
+    if (variant !== "modal") return;
+    const id = setTimeout(() => {
+      textAreaRef.current?.focus();
+    }, 0);
+    return () => clearTimeout(id);
+  }, [variant]);
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -73,16 +82,23 @@ export default function WordForm({
         className={`soft-input modal-input text-sm ${compact ? "min-h-[90px]" : "min-h-[110px]"}`}
         placeholder="Share a verse or reflection..."
         value={content}
-        onChange={(event) => setContent(event.target.value)}
+        ref={textAreaRef}
+        onChange={(event) => {
+          setContent(event.target.value);
+          if (textAreaRef.current) {
+            textAreaRef.current.style.height = "auto";
+            textAreaRef.current.style.height = `${textAreaRef.current.scrollHeight}px`;
+          }
+        }}
       />
 
       <div className="flex justify-end">
         <button
           type="submit"
-          disabled={isSubmitting}
+          disabled={isSubmitting || !content.trim()}
           className="post-button disabled:opacity-60"
         >
-          {isSubmitting ? "Posting..." : "Post"}
+          {isSubmitting ? "Posting..." : !content.trim() ? "⊘ Post" : "Post"}
         </button>
       </div>
     </form>

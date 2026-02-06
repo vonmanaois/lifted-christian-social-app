@@ -3,11 +3,14 @@
 import { signIn, useSession } from "next-auth/react";
 import { useEffect, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import Image from "next/image";
 import {
   ChatCircle,
   DotsThreeOutline,
   HandsPraying,
+  UserCircle,
 } from "@phosphor-icons/react";
+import Modal from "@/components/layout/Modal";
 
 export type PrayerUser = {
   name?: string | null;
@@ -43,6 +46,32 @@ type Comment = {
   userId?: CommentUser | null;
 };
 
+const formatPostTime = (timestamp: string) => {
+  const createdAt = new Date(timestamp);
+  const now = new Date();
+  const diffMs = now.getTime() - createdAt.getTime();
+  const diffMinutes = Math.max(0, Math.floor(diffMs / 60000));
+
+  if (diffMinutes < 1) {
+    return "just now";
+  }
+
+  if (diffMinutes < 60) {
+    return `${diffMinutes}min`;
+  }
+
+  const diffHours = Math.floor(diffMinutes / 60);
+  if (diffHours < 24) {
+    return `${diffHours}h`;
+  }
+
+  const sameYear = createdAt.getFullYear() === now.getFullYear();
+  const options: Intl.DateTimeFormatOptions = sameYear
+    ? { month: "short", day: "numeric" }
+    : { month: "short", day: "numeric", year: "numeric" };
+  return new Intl.DateTimeFormat("en-US", options).format(createdAt);
+};
+
 export default function PrayerCard({ prayer }: PrayerCardProps) {
   const { data: session } = useSession();
   const queryClient = useQueryClient();
@@ -62,10 +91,13 @@ export default function PrayerCard({ prayer }: PrayerCardProps) {
   const [commentText, setCommentText] = useState("");
   const [commentCount, setCommentCount] = useState(prayer.commentCount ?? 0);
   const [showMenu, setShowMenu] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showEditConfirm, setShowEditConfirm] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [content, setContent] = useState(prayer.content);
   const [editText, setEditText] = useState(prayer.content);
   const menuRef = useRef<HTMLDivElement | null>(null);
+  const editRef = useRef<HTMLDivElement | null>(null);
   const [hasPrayed, setHasPrayed] = useState(
     session?.user?.id ? prayer.prayedBy.includes(String(session.user.id)) : false
   );
@@ -116,6 +148,21 @@ export default function PrayerCard({ prayer }: PrayerCardProps) {
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [showMenu]);
+
+  useEffect(() => {
+    if (!isEditing) return;
+    const handleClickOutside = (event: MouseEvent) => {
+      if (!editRef.current) return;
+      if (editRef.current.contains(event.target as Node)) return;
+      if (editText.trim() !== content.trim()) {
+        setShowEditConfirm(true);
+      } else {
+        setIsEditing(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [isEditing, editText, content]);
 
   const commentMutation = useMutation({
     mutationFn: async () => {
@@ -293,9 +340,19 @@ export default function PrayerCard({ prayer }: PrayerCardProps) {
     <article className="wall-card flex gap-4 rounded-none">
       <div className="avatar-ring">
         <div className="avatar-core">
-          {prayer.isAnonymous
-            ? "A"
-            : (prayer.user?.name?.[0] ?? "U").toUpperCase()}
+          {prayer.isAnonymous ? (
+            <UserCircle size={28} weight="regular" />
+          ) : prayer.user?.image ? (
+            <Image
+              src={prayer.user.image}
+              alt={prayer.user?.name ?? "User"}
+              width={48}
+              height={48}
+              className="h-full w-full rounded-full object-cover"
+            />
+          ) : (
+            (prayer.user?.name?.[0] ?? "U").toUpperCase()
+          )}
         </div>
       </div>
       <div className="flex-1">
@@ -325,7 +382,7 @@ export default function PrayerCard({ prayer }: PrayerCardProps) {
               </div>
             )}
             <p className="text-xs text-[color:var(--subtle)]">
-              {new Date(prayer.createdAt).toLocaleString()}
+              {formatPostTime(prayer.createdAt)}
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -334,24 +391,27 @@ export default function PrayerCard({ prayer }: PrayerCardProps) {
                 <button
                   type="button"
                   onClick={() => setShowMenu((prev) => !prev)}
-                  className="h-8 w-8 rounded-full text-[color:var(--subtle)] hover:text-[color:var(--ink)]"
+                  className="h-8 w-8 rounded-full text-[color:var(--subtle)] hover:text-[color:var(--ink)] cursor-pointer"
                   aria-label="More actions"
                 >
                   <DotsThreeOutline size={20} weight="regular" />
                 </button>
                 {showMenu && (
-                  <div className="absolute right-0 top-10 z-10 min-w-[260px] rounded-3xl border border-[color:var(--panel-border)] bg-[color:var(--menu)] p-4 shadow-xl transition-all duration-200 ease-out">
+                  <div className="absolute right-0 top-10 z-10 min-w-[200px] rounded-2xl border border-[color:var(--panel-border)] bg-[color:var(--menu)] p-2 shadow-lg">
                     <button
                       type="button"
                       onClick={handleEditStart}
-                      className="mb-2 w-full rounded-2xl px-5 py-4 text-left text-sm font-semibold text-[color:var(--ink)] hover:bg-[color:var(--surface)] whitespace-nowrap cursor-pointer"
+                      className="mb-1 w-full rounded-xl px-4 py-2.5 text-left text-sm font-semibold text-[color:var(--ink)] hover:bg-[color:var(--surface)] whitespace-nowrap cursor-pointer"
                     >
                       Edit Prayer
                     </button>
                     <button
                       type="button"
-                      onClick={handleDelete}
-                      className="w-full rounded-2xl px-5 py-4 text-left text-sm font-semibold text-[color:var(--danger)] hover:bg-[color:var(--surface)] whitespace-nowrap cursor-pointer"
+                      onClick={() => {
+                        setShowMenu(false);
+                        setShowDeleteConfirm(true);
+                      }}
+                      className="w-full rounded-xl px-4 py-2.5 text-left text-sm font-semibold text-[color:var(--danger)] hover:bg-[color:var(--surface)] whitespace-nowrap cursor-pointer"
                     >
                       Delete Prayer
                     </button>
@@ -362,7 +422,7 @@ export default function PrayerCard({ prayer }: PrayerCardProps) {
           </div>
         </div>
         {isEditing ? (
-          <div className="mt-4 flex flex-col gap-3">
+          <div ref={editRef} className="mt-4 flex flex-col gap-3">
             <textarea
               className="soft-input min-h-[100px] text-sm"
               value={editText}
@@ -372,14 +432,14 @@ export default function PrayerCard({ prayer }: PrayerCardProps) {
               <button
                 type="button"
                 onClick={handleEditSave}
-                className="pill-button bg-[color:var(--accent)] text-white hover:bg-[color:var(--accent-strong)] cursor-pointer"
+                className="rounded-lg px-3 py-2 text-xs font-semibold bg-[color:var(--accent)] text-white cursor-pointer pointer-events-auto hover:opacity-90 active:translate-y-[1px]"
               >
                 Save
               </button>
               <button
                 type="button"
                 onClick={handleEditCancel}
-                className="pill-button bg-[color:var(--surface-strong)] text-[color:var(--ink)] hover:bg-[color:var(--surface)] cursor-pointer"
+                className="rounded-lg px-3 py-2 text-xs font-semibold text-[color:var(--ink)] cursor-pointer pointer-events-auto hover:text-[color:var(--accent)] active:translate-y-[1px]"
               >
                 Cancel
               </button>
@@ -484,6 +544,74 @@ export default function PrayerCard({ prayer }: PrayerCardProps) {
           </div>
         )}
       </div>
+
+      <Modal
+        title="Delete Prayer?"
+        isOpen={showDeleteConfirm}
+        onClose={() => setShowDeleteConfirm(false)}
+      >
+        <p className="text-sm text-[color:var(--subtle)]">
+          This will permanently delete your prayer and cannot be undone.
+        </p>
+        <div className="mt-5 flex items-center justify-end gap-2">
+          <button
+            type="button"
+            onClick={() => setShowDeleteConfirm(false)}
+            className="rounded-lg px-3 py-2 text-xs font-semibold text-[color:var(--ink)] cursor-pointer pointer-events-auto hover:text-[color:var(--accent)] active:translate-y-[1px]"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={async () => {
+              await handleDelete();
+              setShowDeleteConfirm(false);
+            }}
+            className="rounded-lg px-3 py-2 text-xs font-semibold text-white bg-[color:var(--danger)] cursor-pointer pointer-events-auto hover:opacity-90 active:translate-y-[1px]"
+          >
+            Delete
+          </button>
+        </div>
+      </Modal>
+
+      <Modal
+        title="Discard changes?"
+        isOpen={showEditConfirm}
+        onClose={() => setShowEditConfirm(false)}
+      >
+        <p className="text-sm text-[color:var(--subtle)]">
+          You have unsaved changes. Save before leaving?
+        </p>
+        <div className="mt-5 flex items-center justify-end gap-2">
+          <button
+            type="button"
+            onClick={() => setShowEditConfirm(false)}
+            className="rounded-lg px-3 py-2 text-xs font-semibold text-[color:var(--ink)] cursor-pointer pointer-events-auto hover:text-[color:var(--accent)] active:translate-y-[1px]"
+          >
+            Keep editing
+          </button>
+          <button
+            type="button"
+            onClick={async () => {
+              await handleEditSave();
+              setShowEditConfirm(false);
+            }}
+            className="rounded-lg px-3 py-2 text-xs font-semibold text-white bg-[color:var(--accent)] cursor-pointer pointer-events-auto hover:opacity-90 active:translate-y-[1px]"
+          >
+            Save
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              handleEditCancel();
+              setShowEditConfirm(false);
+            }}
+            className="rounded-lg px-3 py-2 text-xs font-semibold text-white bg-[color:var(--danger)] cursor-pointer pointer-events-auto hover:opacity-90 active:translate-y-[1px]"
+          >
+            Discard
+          </button>
+        </div>
+      </Modal>
     </article>
   );
 }

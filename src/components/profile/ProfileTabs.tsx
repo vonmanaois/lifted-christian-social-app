@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import PrayerFeed from "@/components/prayer/PrayerFeed";
 import WordFeed from "@/components/word/WordFeed";
@@ -23,6 +23,15 @@ export default function ProfileTabs({ userId, showComposer = true }: ProfileTabs
   const [showPrayerComposer, setShowPrayerComposer] = useState(false);
   const [showWordComposer, setShowWordComposer] = useState(false);
   const { data: session } = useSession();
+
+  useEffect(() => {
+    const handleOpenPrayer = () => {
+      setActiveTab("My Prayers");
+      setShowPrayerComposer(true);
+    };
+    window.addEventListener("open-prayer-composer", handleOpenPrayer);
+    return () => window.removeEventListener("open-prayer-composer", handleOpenPrayer);
+  }, []);
 
   return (
     <section className="mt-6 flex flex-col gap-6">
@@ -64,7 +73,7 @@ export default function ProfileTabs({ userId, showComposer = true }: ProfileTabs
                     (session?.user?.name?.[0] ?? "U").toUpperCase()
                   )}
                 </span>
-                Write a prayer request
+                Write your new prayer request ...
               </span>
             </button>
           )}
@@ -100,7 +109,7 @@ export default function ProfileTabs({ userId, showComposer = true }: ProfileTabs
       )}
 
       <Modal
-        title="Post a Prayer"
+        title="New Prayer"
         isOpen={showPrayerComposer}
         onClose={() => setShowPrayerComposer(false)}
       >

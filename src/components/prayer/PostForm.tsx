@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { signIn, useSession } from "next-auth/react";
 
 type PostFormProps = {
@@ -21,6 +21,15 @@ export default function PostForm({
   const [isAnonymous, setIsAnonymous] = useState(false);
   const [expiresInDays, setExpiresInDays] = useState<7 | 30>(7);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const textAreaRef = useRef<HTMLTextAreaElement | null>(null);
+
+  useEffect(() => {
+    if (variant !== "modal") return;
+    const id = setTimeout(() => {
+      textAreaRef.current?.focus();
+    }, 0);
+    return () => clearTimeout(id);
+  }, [variant]);
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -66,19 +75,18 @@ export default function PostForm({
         compact ? "p-3" : "p-4"
       }`}
     >
-      {!compact && (
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[color:var(--subtle)]">
-            Prayer
-          </p>
-        </div>
-      )}
-
       <textarea
         className={`soft-input modal-input text-sm ${compact ? "min-h-[90px]" : "min-h-[110px]"}`}
         placeholder="Write your prayer..."
         value={content}
-        onChange={(event) => setContent(event.target.value)}
+        ref={textAreaRef}
+        onChange={(event) => {
+          setContent(event.target.value);
+          if (textAreaRef.current) {
+            textAreaRef.current.style.height = "auto";
+            textAreaRef.current.style.height = `${textAreaRef.current.scrollHeight}px`;
+          }
+        }}
       />
 
       <div className="flex flex-wrap items-center justify-between gap-4 text-sm">
@@ -120,10 +128,10 @@ export default function PostForm({
       <div className="flex justify-end">
         <button
           type="submit"
-          disabled={isSubmitting}
+          disabled={isSubmitting || !content.trim()}
           className="post-button disabled:opacity-60"
         >
-          {isSubmitting ? "Posting..." : "Post"}
+          {isSubmitting ? "Posting..." : !content.trim() ? "⊘ Post" : "Post"}
         </button>
       </div>
     </form>

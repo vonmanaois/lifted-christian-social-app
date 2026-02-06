@@ -1,15 +1,25 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import PostForm from "@/components/prayer/PostForm";
 import PrayerFeed from "@/components/prayer/PrayerFeed";
 import Modal from "@/components/layout/Modal";
 
-export default function PrayerWall() {
+type PrayerWallProps = {
+  openComposerKey?: number;
+};
+
+export default function PrayerWall({ openComposerKey }: PrayerWallProps) {
   const [refreshKey, setRefreshKey] = useState(0);
   const [showComposer, setShowComposer] = useState(false);
   const { data: session } = useSession();
+
+  useEffect(() => {
+    if (openComposerKey) {
+      setShowComposer(true);
+    }
+  }, [openComposerKey]);
 
   return (
     <section className="feed-surface">
@@ -31,13 +41,13 @@ export default function PrayerWall() {
               (session?.user?.name?.[0] ?? "U").toUpperCase()
             )}
           </span>
-          Write a prayer request
+          Write your new prayer request ...
         </span>
       </button>
       <PrayerFeed refreshKey={refreshKey} />
 
       <Modal
-        title="Post a Prayer"
+        title="New Prayer"
         isOpen={showComposer}
         onClose={() => setShowComposer(false)}
       >

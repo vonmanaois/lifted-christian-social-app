@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { signIn, signOut, useSession } from "next-auth/react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
   BellSimple,
   GoogleLogo,
@@ -26,7 +26,10 @@ export default function Sidebar() {
   const [showSearch, setShowSearch] = useState(false);
   const [profileUsername, setProfileUsername] = useState<string | null>(null);
   const prefsRef = useRef<HTMLDivElement | null>(null);
+  const prefsButtonRef = useRef<HTMLButtonElement | null>(null);
   const router = useRouter();
+  const pathname = usePathname();
+  const queryClient = useQueryClient();
 
   type NotificationActor = { name?: string | null; image?: string | null };
   type NotificationItem = {
@@ -80,6 +83,9 @@ export default function Sidebar() {
     if (!showThemes) return;
     const handleClickOutside = (event: MouseEvent) => {
       if (!prefsRef.current) return;
+      if (prefsButtonRef.current?.contains(event.target as Node)) {
+        return;
+      }
       if (!prefsRef.current.contains(event.target as Node)) {
         setShowThemes(false);
       }
@@ -120,7 +126,13 @@ export default function Sidebar() {
         <button
           type="button"
           className="flex items-center gap-3 cursor-pointer text-[color:var(--ink)] hover:text-[color:var(--accent)]"
-          onClick={() => router.push("/")}
+          onClick={() => {
+            if (pathname !== "/") {
+              router.push("/");
+            }
+            queryClient.invalidateQueries({ queryKey: ["prayers"] });
+            queryClient.invalidateQueries({ queryKey: ["words"] });
+          }}
         >
           <span className="h-10 w-10 rounded-2xl bg-[color:var(--panel)] flex items-center justify-center">
             <House size={22} weight="regular" />
@@ -147,15 +159,20 @@ export default function Sidebar() {
           </span>
           <span className="hidden md:inline">Profile</span>
         </button>
-        <a
-          href="#prayer-form"
+        <button
+          type="button"
+          onClick={() => {
+            if (typeof window !== "undefined") {
+              window.dispatchEvent(new CustomEvent("open-prayer-composer"));
+            }
+          }}
           className="flex items-center gap-3 cursor-pointer text-[color:var(--ink)] hover:text-[color:var(--accent)]"
         >
           <span className="h-10 w-10 rounded-2xl bg-[color:var(--accent)] text-white flex items-center justify-center">
             <Plus size={22} weight="regular" />
           </span>
-          <span className="hidden md:inline">Post a Prayer</span>
-        </a>
+          <span className="hidden md:inline">Add a Prayer</span>
+        </button>
         <button
           type="button"
           className="flex items-center gap-3 cursor-pointer text-[color:var(--ink)] hover:text-[color:var(--accent)]"
@@ -169,8 +186,15 @@ export default function Sidebar() {
         </button>
         <button
           type="button"
+          ref={prefsButtonRef}
           className="flex items-center gap-3 cursor-pointer text-[color:var(--ink)] hover:text-[color:var(--accent)]"
-          onClick={() => setShowThemes((prev) => !prev)}
+          onClick={() => {
+            if (showThemes) {
+              setShowThemes(false);
+              return;
+            }
+            setShowThemes(true);
+          }}
         >
           <span className="h-10 w-10 rounded-2xl bg-[color:var(--panel)] flex items-center justify-center">
             <SlidersHorizontal size={22} weight="regular" />
@@ -179,12 +203,11 @@ export default function Sidebar() {
         </button>
       </div>
 
-      <div
-        ref={prefsRef}
-        className={`hidden md:block overflow-hidden transition-all duration-300 ${
-          showThemes ? "max-h-[520px] opacity-100 mt-2" : "max-h-0 opacity-0"
-        }`}
-      >
+      {showThemes && (
+        <div
+          ref={prefsRef}
+          className="hidden md:block mt-2 pref-animate"
+        >
         <div className="panel p-4 flex flex-col gap-4 ml-6">
           <ThemeToggle />
           <div className="mt-2 border-t border-slate-200 pt-4">
@@ -219,6 +242,7 @@ export default function Sidebar() {
           </div>
         </div>
       </div>
+      )}
 
       <Modal
         title="Sign in"
@@ -335,12 +359,18 @@ export default function Sidebar() {
           >
             <UserCircle size={24} weight="regular" />
           </button>
-          <a
-            href="#prayer-form"
+          <button
+            type="button"
+            onClick={() => {
+              if (typeof window !== "undefined") {
+                window.dispatchEvent(new CustomEvent("open-prayer-composer"));
+              }
+            }}
             className="flex flex-col items-center gap-1 text-[color:var(--accent)]"
+            aria-label="Add a prayer"
           >
             <Plus size={24} weight="regular" />
-          </a>
+          </button>
           <button
             type="button"
             className="flex flex-col items-center gap-1 text-[color:var(--ink)] hover:text-[color:var(--accent)]"
