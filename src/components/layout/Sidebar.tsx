@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { signIn, signOut, useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Modal from "@/components/layout/Modal";
@@ -26,30 +27,24 @@ export default function Sidebar() {
     wordId?: { content?: string } | null;
   };
 
-  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
-  const [isLoadingNotifications, setIsLoadingNotifications] = useState(false);
-
-  const openNotifications = async () => {
-    if (!isAuthenticated) {
-      setShowSignIn(true);
-      return;
-    }
-
-    setShowNotifications(true);
-    setIsLoadingNotifications(true);
-
-    try {
+  const { data: notifications = [], isLoading: isLoadingNotifications } = useQuery({
+    queryKey: ["notifications"],
+    queryFn: async () => {
       const response = await fetch("/api/notifications", { cache: "no-store" });
       if (!response.ok) {
         throw new Error("Failed to load notifications");
       }
-      const data = (await response.json()) as NotificationItem[];
-      setNotifications(data);
-    } catch (error) {
-      console.error(error);
-    } finally {
-      setIsLoadingNotifications(false);
+      return (await response.json()) as NotificationItem[];
+    },
+    enabled: showNotifications && isAuthenticated,
+  });
+
+  const openNotifications = () => {
+    if (!isAuthenticated) {
+      setShowSignIn(true);
+      return;
     }
+    setShowNotifications(true);
   };
 
   useEffect(() => {
@@ -239,11 +234,21 @@ export default function Sidebar() {
         align="left"
       >
         {isLoadingNotifications ? (
-          <p className="text-sm text-[color:var(--subtle)]">Loading...</p>
+          <div className="flex flex-col gap-3">
+            {Array.from({ length: 3 }).map((_, index) => (
+              <div key={index} className="panel p-3">
+                <div className="h-3 w-40 bg-slate-200 rounded-full animate-pulse" />
+                <div className="mt-2 h-3 w-32 bg-slate-200 rounded-full animate-pulse" />
+              </div>
+            ))}
+          </div>
         ) : notifications.length === 0 ? (
-          <p className="text-sm text-[color:var(--subtle)]">
-            No notifications yet.
-          </p>
+          <div className="panel p-4 text-sm text-[color:var(--subtle)]">
+            <p className="text-[color:var(--ink)] font-semibold">
+              No notifications yet.
+            </p>
+            <p className="mt-1">When someone interacts, you’ll see it here.</p>
+          </div>
         ) : (
           <div className="flex flex-col gap-3">
             {notifications.map((note) => (

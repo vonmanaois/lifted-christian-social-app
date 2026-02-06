@@ -22,9 +22,11 @@ export default function ProfileStats({
 }: ProfileStatsProps) {
   const [followersCount, setFollowersCount] = useState(initialFollowersCount);
   const [followingCount, setFollowingCount] = useState(initialFollowingCount);
+  const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
     const loadStats = async () => {
+      setIsLoading(true);
       try {
         const query = usernameParam ? `?username=${usernameParam}` : "";
         const response = await fetch(`/api/user/profile${query}`, {
@@ -40,6 +42,8 @@ export default function ProfileStats({
         }
       } catch (error) {
         console.error(error);
+      } finally {
+        setIsLoading(false);
       }
     };
 
@@ -66,15 +70,23 @@ export default function ProfileStats({
       </div>
       <div className="flex flex-col">
         <span>Followers</span>
-        <span className="text-lg font-semibold text-[color:var(--ink)]">
-          {followersCount}
-        </span>
+        {isLoading ? (
+          <span className="mt-2 h-4 w-10 bg-slate-200 rounded-full animate-pulse" />
+        ) : (
+          <span className="text-lg font-semibold text-[color:var(--ink)]">
+            {followersCount}
+          </span>
+        )}
       </div>
       <div className="flex flex-col">
         <span>Following</span>
-        <span className="text-lg font-semibold text-[color:var(--ink)]">
-          {followingCount}
-        </span>
+        {isLoading ? (
+          <span className="mt-2 h-4 w-10 bg-slate-200 rounded-full animate-pulse" />
+        ) : (
+          <span className="text-lg font-semibold text-[color:var(--ink)]">
+            {followingCount}
+          </span>
+        )}
       </div>
     </div>
   );

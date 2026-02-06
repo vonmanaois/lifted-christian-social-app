@@ -13,16 +13,16 @@ export default function HomeTabs() {
 
   return (
     <section className="flex flex-col gap-6">
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-3 justify-end">
         {tabs.map((tab) => (
           <button
             key={tab}
             type="button"
             onClick={() => setActiveTab(tab)}
-            className={`pill-button border text-sm cursor-pointer ${
+            className={`pill-button text-sm cursor-pointer transition ${
               activeTab === tab
-                ? "border-transparent bg-[color:var(--accent)] text-white"
-                : "border-slate-200 text-[color:var(--ink)]"
+                ? "bg-[color:var(--accent)] text-white shadow-sm"
+                : "bg-[color:var(--panel)] text-[color:var(--ink)] hover:bg-[color:var(--surface-strong)]"
             }`}
           >
             {tab}

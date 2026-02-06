@@ -2,6 +2,7 @@
 
 import { signIn, useSession } from "next-auth/react";
 import { useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 export type PrayerUser = {
   name?: string | null;
@@ -37,13 +38,66 @@ type Comment = {
 
 export default function PrayerCard({ prayer }: PrayerCardProps) {
   const { data: session } = useSession();
+  const queryClient = useQueryClient();
   const [count, setCount] = useState(prayer.prayedBy.length);
   const [isPending, setIsPending] = useState(false);
   const [showComments, setShowComments] = useState(false);
-  const [comments, setComments] = useState<Comment[]>([]);
-  const [isLoadingComments, setIsLoadingComments] = useState(false);
   const [commentText, setCommentText] = useState("");
   const [commentCount, setCommentCount] = useState(prayer.commentCount ?? 0);
+
+  const { data: comments = [], isLoading: isLoadingComments } = useQuery({
+    queryKey: ["prayer-comments", prayer._id],
+    queryFn: async () => {
+      const response = await fetch(`/api/prayers/${prayer._id}/comments`, {
+        cache: "no-store",
+      });
+      if (!response.ok) {
+        throw new Error("Failed to load comments");
+      }
+      return (await response.json()) as Comment[];
+    },
+    enabled: showComments,
+    onSuccess: (data) => {
+      setCommentCount(data.length);
+    },
+  });
+
+  const commentMutation = useMutation({
+    mutationFn: async () => {
+      const response = await fetch("/api/comments", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          prayerId: prayer._id,
+          content: commentText.trim(),
+        }),
+      });
+      if (!response.ok) {
+        throw new Error("Failed to post comment");
+      }
+    },
+    onSuccess: async () => {
+      setCommentText("");
+      await queryClient.invalidateQueries({
+        queryKey: ["prayer-comments", prayer._id],
+      });
+    },
+  });
+
+  const prayMutation = useMutation({
+    mutationFn: async () => {
+      const response = await fetch(`/api/prayers/${prayer._id}/pray`, {
+        method: "POST",
+      });
+      if (!response.ok) {
+        throw new Error("Failed to update prayer");
+      }
+      return (await response.json()) as { count: number };
+    },
+    onSuccess: (data) => {
+      setCount(data.count);
+    },
+  });
 
   const handlePray = async () => {
     if (!session?.user?.id) return;
@@ -51,16 +105,7 @@ export default function PrayerCard({ prayer }: PrayerCardProps) {
     setIsPending(true);
 
     try {
-      const response = await fetch(`/api/prayers/${prayer._id}/pray`, {
-        method: "POST",
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to update prayer");
-      }
-
-      const data = (await response.json()) as { count: number };
-      setCount(data.count);
+      await prayMutation.mutateAsync();
     } catch (error) {
       console.error(error);
     } finally {
@@ -68,29 +113,7 @@ export default function PrayerCard({ prayer }: PrayerCardProps) {
     }
   };
 
-  const loadComments = async () => {
-    setIsLoadingComments(true);
-    try {
-      const response = await fetch(`/api/prayers/${prayer._id}/comments`, {
-        cache: "no-store",
-      });
-      if (!response.ok) {
-        throw new Error("Failed to load comments");
-      }
-      const data = (await response.json()) as Comment[];
-      setComments(data);
-      setCommentCount(data.length);
-    } catch (error) {
-      console.error(error);
-    } finally {
-      setIsLoadingComments(false);
-    }
-  };
-
-  const toggleComments = async () => {
-    if (!showComments) {
-      await loadComments();
-    }
+  const toggleComments = () => {
     setShowComments((prev) => !prev);
   };
 
@@ -104,25 +127,7 @@ export default function PrayerCard({ prayer }: PrayerCardProps) {
 
     if (!commentText.trim()) return;
 
-    try {
-      const response = await fetch("/api/comments", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          prayerId: prayer._id,
-          content: commentText.trim(),
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to post comment");
-      }
-
-      setCommentText("");
-      await loadComments();
-    } catch (error) {
-      console.error(error);
-    }
+    commentMutation.mutate();
   };
 
   return (
@@ -143,7 +148,11 @@ export default function PrayerCard({ prayer }: PrayerCardProps) {
               </p>
             ) : (
               <a
-                href={prayer.user?.username ? `/profile/${prayer.user.username}` : "/profile"}
+                href={
+                  prayer.user?.username
+                    ? `/profile/${prayer.user.username}`
+                    : "/profile"
+                }
                 className="text-sm font-semibold text-[color:var(--ink)] hover:underline"
               >
                 {prayer.user?.name ?? "User"}
@@ -186,10 +195,7 @@ export default function PrayerCard({ prayer }: PrayerCardProps) {
 
         {showComments && (
           <div className="mt-5 border-t border-slate-100 pt-4">
-            <form
-              onSubmit={handleCommentSubmit}
-              className="flex flex-col gap-3"
-            >
+            <form onSubmit={handleCommentSubmit} className="flex flex-col gap-3">
               <textarea
                 className="soft-input min-h-[90px] text-sm"
                 placeholder="Write a comment..."
@@ -208,13 +214,19 @@ export default function PrayerCard({ prayer }: PrayerCardProps) {
 
             <div className="mt-4 flex flex-col gap-3 text-sm">
               {isLoadingComments ? (
-                <div className="text-[color:var(--subtle)]">
-                  Loading comments...
+                <div className="flex flex-col gap-3">
+                  {Array.from({ length: 2 }).map((_, index) => (
+                    <div key={index} className="flex gap-3">
+                      <div className="h-9 w-9 rounded-full bg-slate-200 animate-pulse" />
+                      <div className="flex-1">
+                        <div className="h-3 w-24 bg-slate-200 rounded-full animate-pulse" />
+                        <div className="mt-2 h-3 w-full bg-slate-200 rounded-full animate-pulse" />
+                      </div>
+                    </div>
+                  ))}
                 </div>
               ) : comments.length === 0 ? (
-                <div className="text-[color:var(--subtle)]">
-                  No comments yet.
-                </div>
+                <div className="text-[color:var(--subtle)]">No comments yet.</div>
               ) : (
                 comments.map((comment) => (
                   <div key={comment._id} className="flex gap-3">

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { signIn, useSession } from "next-auth/react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 type WordUser = {
   name?: string | null;
@@ -30,37 +31,65 @@ type WordCardProps = {
 
 export default function WordCard({ word }: WordCardProps) {
   const { data: session } = useSession();
+  const queryClient = useQueryClient();
   const [likeCount, setLikeCount] = useState(word.likedBy?.length ?? 0);
   const [commentCount, setCommentCount] = useState(word.commentCount ?? 0);
   const [showComments, setShowComments] = useState(false);
-  const [comments, setComments] = useState<WordComment[]>([]);
   const [commentText, setCommentText] = useState("");
-  const [isLoadingComments, setIsLoadingComments] = useState(false);
   const [isLiking, setIsLiking] = useState(false);
 
-  const loadComments = async () => {
-    setIsLoadingComments(true);
-    try {
+  const { data: comments = [], isLoading: isLoadingComments } = useQuery({
+    queryKey: ["word-comments", word._id],
+    queryFn: async () => {
       const response = await fetch(`/api/words/${word._id}/comments`, {
         cache: "no-store",
       });
       if (!response.ok) {
         throw new Error("Failed to load comments");
       }
-      const data = (await response.json()) as WordComment[];
-      setComments(data);
+      return (await response.json()) as WordComment[];
+    },
+    enabled: showComments,
+    onSuccess: (data) => {
       setCommentCount(data.length);
-    } catch (error) {
-      console.error(error);
-    } finally {
-      setIsLoadingComments(false);
-    }
-  };
+    },
+  });
 
-  const toggleComments = async () => {
-    if (!showComments) {
-      await loadComments();
-    }
+  const likeMutation = useMutation({
+    mutationFn: async () => {
+      const response = await fetch(`/api/words/${word._id}/like`, {
+        method: "POST",
+      });
+      if (!response.ok) {
+        throw new Error("Failed to like word");
+      }
+      return (await response.json()) as { count: number };
+    },
+    onSuccess: (data) => {
+      setLikeCount(data.count);
+    },
+  });
+
+  const commentMutation = useMutation({
+    mutationFn: async () => {
+      const response = await fetch("/api/word-comments", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ wordId: word._id, content: commentText.trim() }),
+      });
+      if (!response.ok) {
+        throw new Error("Failed to post comment");
+      }
+    },
+    onSuccess: async () => {
+      setCommentText("");
+      await queryClient.invalidateQueries({
+        queryKey: ["word-comments", word._id],
+      });
+    },
+  });
+
+  const toggleComments = () => {
     setShowComments((prev) => !prev);
   };
 
@@ -72,14 +101,7 @@ export default function WordCard({ word }: WordCardProps) {
 
     setIsLiking(true);
     try {
-      const response = await fetch(`/api/words/${word._id}/like`, {
-        method: "POST",
-      });
-      if (!response.ok) {
-        throw new Error("Failed to like word");
-      }
-      const data = (await response.json()) as { count: number };
-      setLikeCount(data.count);
+      await likeMutation.mutateAsync();
     } catch (error) {
       console.error(error);
     } finally {
@@ -97,22 +119,7 @@ export default function WordCard({ word }: WordCardProps) {
 
     if (!commentText.trim()) return;
 
-    try {
-      const response = await fetch("/api/word-comments", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ wordId: word._id, content: commentText.trim() }),
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to post comment");
-      }
-
-      setCommentText("");
-      await loadComments();
-    } catch (error) {
-      console.error(error);
-    }
+    commentMutation.mutate();
   };
 
   return (
@@ -159,10 +166,7 @@ export default function WordCard({ word }: WordCardProps) {
 
         {showComments && (
           <div className="mt-5 border-t border-slate-100 pt-4">
-            <form
-              onSubmit={handleCommentSubmit}
-              className="flex flex-col gap-3"
-            >
+            <form onSubmit={handleCommentSubmit} className="flex flex-col gap-3">
               <textarea
                 className="soft-input min-h-[90px] text-sm"
                 placeholder="Write a comment..."
@@ -181,8 +185,16 @@ export default function WordCard({ word }: WordCardProps) {
 
             <div className="mt-4 flex flex-col gap-3 text-sm">
               {isLoadingComments ? (
-                <div className="text-[color:var(--subtle)]">
-                  Loading comments...
+                <div className="flex flex-col gap-3">
+                  {Array.from({ length: 2 }).map((_, index) => (
+                    <div key={index} className="flex gap-3">
+                      <div className="h-9 w-9 rounded-full bg-slate-200 animate-pulse" />
+                      <div className="flex-1">
+                        <div className="h-3 w-24 bg-slate-200 rounded-full animate-pulse" />
+                        <div className="mt-2 h-3 w-full bg-slate-200 rounded-full animate-pulse" />
+                      </div>
+                    </div>
+                  ))}
                 </div>
               ) : comments.length === 0 ? (
                 <div className="text-[color:var(--subtle)]">No comments yet.</div>
