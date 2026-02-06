@@ -42,7 +42,14 @@ export default function ProfileHeader({
       }
     };
 
+    const listener = () => {
+      loadProfile();
+    };
+
+    window.addEventListener("profile:updated", listener);
     loadProfile();
+
+    return () => window.removeEventListener("profile:updated", listener);
   }, [usernameParam]);
 
   return (
@@ -50,7 +57,7 @@ export default function ProfileHeader({
       <p className="text-3xl font-semibold text-[color:var(--ink)]">{name}</p>
       <p className="mt-2 text-sm text-[color:var(--subtle)]">@{username}</p>
       {bio ? (
-        <p className="mt-2 text-sm text-[color:var(--subtle)]">{bio}</p>
+        <p className="mt-2 text-sm text-[color:var(--ink)]">{bio}</p>
       ) : null}
     </div>
   );

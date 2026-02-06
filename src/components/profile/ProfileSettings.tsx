@@ -8,6 +8,7 @@ type ProfileSettingsProps = {
   required?: boolean;
   currentName?: string | null;
   currentBio?: string | null;
+  onUpdated?: () => void;
 };
 
 export default function ProfileSettings({
@@ -15,6 +16,7 @@ export default function ProfileSettings({
   required = false,
   currentName,
   currentBio,
+  onUpdated,
 }: ProfileSettingsProps) {
   const router = useRouter();
   const [name, setName] = useState(currentName ?? "");
@@ -75,6 +77,8 @@ export default function ProfileSettings({
       if (typeof data.username === "string") setUsername(data.username);
       if (typeof data.bio === "string") setBio(data.bio);
       setMessage("Profile updated successfully.");
+      window.dispatchEvent(new Event("profile:updated"));
+      onUpdated?.();
       router.refresh();
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Something went wrong");

@@ -8,6 +8,7 @@ import Sidebar from "@/components/layout/Sidebar";
 import ProfileTabs from "@/components/profile/ProfileTabs";
 import FollowButton from "@/components/profile/FollowButton";
 import ProfileHeader from "@/components/profile/ProfileHeader";
+import ProfileUpdateModal from "@/components/profile/ProfileUpdateModal";
 
 export const dynamic = "force-dynamic";
 
@@ -90,6 +91,16 @@ export default async function PublicProfilePage({
               </span>
             </div>
           </div>
+
+          {isSelf && (
+            <div className="mt-6">
+              <ProfileUpdateModal
+                currentUsername={user?.username ?? null}
+                currentName={user?.name ?? null}
+                currentBio={user?.bio ?? null}
+              />
+            </div>
+          )}
 
           <ProfileTabs userId={user._id.toString()} />
         </div>

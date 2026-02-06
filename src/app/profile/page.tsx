@@ -8,6 +8,7 @@ import ProfileSettings from "@/components/profile/ProfileSettings";
 import Sidebar from "@/components/layout/Sidebar";
 import ProfileTabs from "@/components/profile/ProfileTabs";
 import ProfileHeader from "@/components/profile/ProfileHeader";
+import ProfileUpdateModal from "@/components/profile/ProfileUpdateModal";
 
 export const dynamic = "force-dynamic";
 
@@ -79,18 +80,12 @@ export default async function ProfilePage() {
           </div>
 
           <div className="mt-6">
-            <details className="panel p-4">
-              <summary className="cursor-pointer text-sm font-semibold text-[color:var(--ink)]">
-                Update profile
-              </summary>
-              <div className="mt-4">
-                <ProfileSettings
-                  currentUsername={user?.username ?? null}
-                  currentName={user?.name ?? null}
-                  currentBio={user?.bio ?? null}
-                />
-              </div>
-            </details>
+          <ProfileUpdateModal
+            currentUsername={user?.username ?? null}
+            currentName={user?.name ?? null}
+            currentBio={user?.bio ?? null}
+            onUpdated={() => {}}
+          />
           </div>
 
           <ProfileTabs userId={session.user.id} />
