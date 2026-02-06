@@ -21,6 +21,10 @@ export default async function ProfilePage() {
   await dbConnect();
 
   const user = await UserModel.findById(session.user.id).lean();
+
+  if (user?.username) {
+    redirect(`/profile/${user.username}`);
+  }
   const prayedCount = await PrayerModel.countDocuments({
     prayedBy: session.user.id,
   });

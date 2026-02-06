@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { signIn, signOut, useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Modal from "@/components/layout/Modal";
@@ -12,6 +12,7 @@ export default function Sidebar() {
   const [showThemes, setShowThemes] = useState(false);
   const [showSignIn, setShowSignIn] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
+  const [profileUsername, setProfileUsername] = useState<string | null>(null);
   const router = useRouter();
 
   type NotificationActor = { name?: string | null; image?: string | null };
@@ -50,6 +51,24 @@ export default function Sidebar() {
     }
   };
 
+  useEffect(() => {
+    const loadProfile = async () => {
+      if (!isAuthenticated) return;
+      try {
+        const response = await fetch("/api/user/profile", { cache: "no-store" });
+        if (!response.ok) return;
+        const data = (await response.json()) as { username?: string | null };
+        if (typeof data.username === "string") {
+          setProfileUsername(data.username);
+        }
+      } catch (error) {
+        console.error(error);
+      }
+    };
+
+    loadProfile();
+  }, [isAuthenticated]);
+
   return (
     <aside className="panel p-5 flex flex-col gap-5 h-fit">
       <button
@@ -82,7 +101,11 @@ export default function Sidebar() {
           className="flex items-center gap-3 cursor-pointer"
           onClick={() => {
             if (isAuthenticated) {
-              router.push("/profile");
+              if (profileUsername) {
+                router.push(`/profile/${profileUsername}`);
+              } else {
+                router.push("/profile");
+              }
             } else {
               setShowSignIn(true);
             }

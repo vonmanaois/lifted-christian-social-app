@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
 type ProfileSettingsProps = {
@@ -23,6 +23,27 @@ export default function ProfileSettings({
   const [message, setMessage] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
 
+  useEffect(() => {
+    const loadProfile = async () => {
+      try {
+        const response = await fetch("/api/user/profile", { cache: "no-store" });
+        if (!response.ok) return;
+        const data = (await response.json()) as {
+          name?: string | null;
+          username?: string | null;
+          bio?: string | null;
+        };
+        if (typeof data.name === "string") setName(data.name);
+        if (typeof data.username === "string") setUsername(data.username);
+        if (typeof data.bio === "string") setBio(data.bio);
+      } catch (error) {
+        console.error(error);
+      }
+    };
+
+    loadProfile();
+  }, []);
+
   const handleSave = async (event: React.FormEvent) => {
     event.preventDefault();
     setMessage(null);
@@ -39,12 +60,20 @@ export default function ProfileSettings({
         }),
       });
 
-      const data = (await response.json()) as { error?: string; username?: string };
+      const data = (await response.json()) as {
+        error?: string;
+        username?: string;
+        name?: string;
+        bio?: string;
+      };
 
       if (!response.ok) {
         throw new Error(data.error || "Failed to update profile");
       }
 
+      if (typeof data.name === "string") setName(data.name);
+      if (typeof data.username === "string") setUsername(data.username);
+      if (typeof data.bio === "string") setBio(data.bio);
       setMessage("Profile updated successfully.");
       router.refresh();
     } catch (error) {

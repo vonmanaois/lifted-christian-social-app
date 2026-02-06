@@ -14,13 +14,14 @@ export const dynamic = "force-dynamic";
 export default async function PublicProfilePage({
   params,
 }: {
-  params: { username: string };
+  params: Promise<{ username: string }>;
 }) {
+  const { username } = await params;
   const session = await getServerSession(authOptions);
 
   await dbConnect();
 
-  const user = await UserModel.findOne({ username: params.username }).lean();
+  const user = await UserModel.findOne({ username }).lean();
 
   if (!user) {
     redirect("/profile");
