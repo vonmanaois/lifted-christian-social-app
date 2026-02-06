@@ -1,8 +1,13 @@
 "use client";
 
 import { signIn, useSession } from "next-auth/react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  ChatCircle,
+  DotsThreeOutline,
+  HandsPraying,
+} from "@phosphor-icons/react";
 
 export type PrayerUser = {
   name?: string | null;
@@ -60,6 +65,7 @@ export default function PrayerCard({ prayer }: PrayerCardProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [content, setContent] = useState(prayer.content);
   const [editText, setEditText] = useState(prayer.content);
+  const menuRef = useRef<HTMLDivElement | null>(null);
   const [hasPrayed, setHasPrayed] = useState(
     session?.user?.id ? prayer.prayedBy.includes(String(session.user.id)) : false
   );
@@ -98,6 +104,18 @@ export default function PrayerCard({ prayer }: PrayerCardProps) {
       setHasPrayed(true);
     }
   }, [prayer.prayedBy, session?.user?.id]);
+
+  useEffect(() => {
+    if (!showMenu) return;
+    const handleClickOutside = (event: MouseEvent) => {
+      if (!menuRef.current) return;
+      if (!menuRef.current.contains(event.target as Node)) {
+        setShowMenu(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [showMenu]);
 
   const commentMutation = useMutation({
     mutationFn: async () => {
@@ -288,46 +306,38 @@ export default function PrayerCard({ prayer }: PrayerCardProps) {
                 Anonymous
               </p>
             ) : (
-              <a
-                href={
-                  prayer.user?.username
-                    ? `/profile/${prayer.user.username}`
-                    : "/profile"
-                }
-                className="text-sm font-semibold text-[color:var(--ink)] hover:underline"
-              >
-                {prayer.user?.name ?? "User"}
-              </a>
+              <div className="flex flex-wrap items-center gap-2">
+                <a
+                  href={
+                    prayer.user?.username
+                      ? `/profile/${prayer.user.username}`
+                      : "/profile"
+                  }
+                  className="text-sm font-semibold text-[color:var(--ink)] hover:underline"
+                >
+                  {prayer.user?.name ?? "User"}
+                </a>
+                {prayer.user?.username && (
+                  <span className="text-xs text-[color:var(--subtle)]">
+                    @{prayer.user.username}
+                  </span>
+                )}
+              </div>
             )}
             <p className="text-xs text-[color:var(--subtle)]">
               {new Date(prayer.createdAt).toLocaleString()}
             </p>
           </div>
           <div className="flex items-center gap-2">
-            <div className="meta-pill">
-              <span>Prayed</span>
-              <span className="font-semibold text-[color:var(--ink)]">
-                {count}
-              </span>
-            </div>
             {isOwner && (
-              <div className="relative">
+              <div className="relative" ref={menuRef}>
                 <button
                   type="button"
                   onClick={() => setShowMenu((prev) => !prev)}
-                  className="h-8 w-8 rounded-full text-[color:var(--subtle)] hover:bg-[color:var(--surface-strong)]"
+                  className="h-8 w-8 rounded-full text-[color:var(--subtle)] hover:text-[color:var(--ink)]"
                   aria-label="More actions"
                 >
-                  <svg
-                    viewBox="0 0 24 24"
-                    aria-hidden="true"
-                    className="mx-auto h-4 w-4"
-                    fill="currentColor"
-                  >
-                    <circle cx="6" cy="12" r="1.7" />
-                    <circle cx="12" cy="12" r="1.7" />
-                    <circle cx="18" cy="12" r="1.7" />
-                  </svg>
+                  <DotsThreeOutline size={20} weight="regular" />
                 </button>
                 {showMenu && (
                   <div className="absolute right-0 top-10 z-10 min-w-[260px] rounded-3xl border border-[color:var(--panel-border)] bg-[color:var(--menu)] p-4 shadow-xl transition-all duration-200 ease-out">
@@ -386,21 +396,32 @@ export default function PrayerCard({ prayer }: PrayerCardProps) {
               type="button"
               onClick={handlePray}
               disabled={!session?.user?.id || isPending || hasPrayed}
-              className="pill-button bg-[color:var(--surface-strong)] text-[color:var(--ink)] hover:bg-[color:var(--surface)] disabled:opacity-50"
+              className="pill-button text-[color:var(--ink)] hover:text-[color:var(--accent)] disabled:opacity-50"
+              aria-label={hasPrayed ? "Prayed" : "Pray"}
             >
-              {hasPrayed ? "Prayed" : "Pray"}
+              <HandsPraying size={22} weight={hasPrayed ? "fill" : "regular"} />
             </button>
           )}
           <button
             type="button"
             onClick={toggleComments}
-            className="pill-button bg-[color:var(--surface-strong)] text-[color:var(--ink)] hover:bg-[color:var(--surface)]"
+            className="pill-button text-[color:var(--ink)] hover:text-[color:var(--accent)]"
           >
-            Comments · {commentCount}
+            <span className="inline-flex items-center gap-2">
+              <ChatCircle size={22} weight="regular" />
+              {commentCount > 0 && (
+                <span className="text-xs font-semibold text-[color:var(--ink)]">
+                  {commentCount}
+                </span>
+              )}
+            </span>
           </button>
-          <span className="text-xs text-[color:var(--subtle)]">
-            Lift this prayer up.
-          </span>
+          <div className="ml-auto meta-pill">
+            <span>Prayed</span>
+            <span className="font-semibold text-[color:var(--ink)]">
+              {count}
+            </span>
+          </div>
         </div>
 
         {showComments && (

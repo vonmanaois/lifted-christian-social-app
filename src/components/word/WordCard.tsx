@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { signIn, useSession } from "next-auth/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { DotsThreeOutline } from "@phosphor-icons/react";
 
 type WordUser = {
   name?: string | null;
@@ -53,6 +54,7 @@ export default function WordCard({ word }: WordCardProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [content, setContent] = useState(word.content);
   const [editText, setEditText] = useState(word.content);
+  const menuRef = useRef<HTMLDivElement | null>(null);
   const isOwner =
     word.isOwner ??
     Boolean(
@@ -80,6 +82,18 @@ export default function WordCard({ word }: WordCardProps) {
       setCommentCount(comments.length);
     }
   }, [comments.length, showComments]);
+
+  useEffect(() => {
+    if (!showMenu) return;
+    const handleClickOutside = (event: MouseEvent) => {
+      if (!menuRef.current) return;
+      if (!menuRef.current.contains(event.target as Node)) {
+        setShowMenu(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [showMenu]);
 
   const likeMutation = useMutation({
     mutationFn: async () => {
@@ -250,23 +264,14 @@ export default function WordCard({ word }: WordCardProps) {
               {new Date(word.createdAt).toLocaleString()}
             </p>
             {isOwner && (
-              <div className="relative">
+              <div className="relative" ref={menuRef}>
                 <button
                   type="button"
                   onClick={() => setShowMenu((prev) => !prev)}
                   className="h-8 w-8 rounded-full text-[color:var(--subtle)] hover:bg-[color:var(--surface-strong)]"
                   aria-label="More actions"
                 >
-                  <svg
-                    viewBox="0 0 24 24"
-                    aria-hidden="true"
-                    className="mx-auto h-4 w-4"
-                    fill="currentColor"
-                  >
-                    <circle cx="6" cy="12" r="1.7" />
-                    <circle cx="12" cy="12" r="1.7" />
-                    <circle cx="18" cy="12" r="1.7" />
-                  </svg>
+                  <DotsThreeOutline size={20} weight="regular" />
                 </button>
                 {showMenu && (
                   <div className="absolute right-0 top-10 z-10 min-w-[260px] rounded-3xl border border-[color:var(--panel-border)] bg-[color:var(--menu)] p-4 shadow-xl transition-all duration-200 ease-out">

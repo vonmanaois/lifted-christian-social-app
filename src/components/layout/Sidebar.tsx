@@ -4,6 +4,14 @@ import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { signIn, signOut, useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
+import {
+  BellSimple,
+  GoogleLogo,
+  House,
+  Plus,
+  SlidersHorizontal,
+  UserCircle,
+} from "@phosphor-icons/react";
 import Modal from "@/components/layout/Modal";
 import ThemeToggle from "@/components/layout/ThemeToggle";
 import UserSearch from "@/components/layout/UserSearch";
@@ -88,9 +96,7 @@ export default function Sidebar() {
           onClick={() => router.push("/")}
         >
           <span className="h-10 w-10 rounded-2xl border border-slate-200 bg-[color:var(--panel)] flex items-center justify-center">
-            <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.7">
-              <path d="M3 11.5 12 4l9 7.5v8a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1v-8Z" />
-            </svg>
+            <House size={20} weight="regular" />
           </span>
           Home
         </button>
@@ -110,10 +116,7 @@ export default function Sidebar() {
           }}
         >
           <span className="h-10 w-10 rounded-2xl border border-slate-200 bg-[color:var(--panel)] flex items-center justify-center">
-            <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.7">
-              <path d="M20 20a8 8 0 1 0-16 0" />
-              <circle cx="12" cy="9" r="3.5" />
-            </svg>
+            <UserCircle size={20} weight="regular" />
           </span>
           Profile
         </button>
@@ -122,9 +125,7 @@ export default function Sidebar() {
           className="flex items-center gap-3 cursor-pointer"
         >
           <span className="h-10 w-10 rounded-2xl bg-[color:var(--accent)] text-white flex items-center justify-center">
-            <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8">
-              <path d="M12 5v14M5 12h14" />
-            </svg>
+            <Plus size={20} weight="regular" />
           </span>
           Post a Prayer
         </a>
@@ -135,13 +136,7 @@ export default function Sidebar() {
           onClick={openNotifications}
         >
           <span className="h-10 w-10 rounded-2xl border border-slate-200 bg-[color:var(--panel)] flex items-center justify-center">
-            <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.7">
-              <path d="M9 3v7M15 3v7" />
-              <path d="M9 9h6" />
-              <path d="M7 12c.6 1.2 2.4 2 5 2s4.4-.8 5-2" />
-              <path d="M6 16h12" />
-              <path d="M10 16v3M14 16v3" />
-            </svg>
+            <BellSimple size={20} weight="regular" />
           </span>
           Notifications
         </button>
@@ -151,9 +146,7 @@ export default function Sidebar() {
           onClick={() => setShowThemes((prev) => !prev)}
         >
           <span className="h-10 w-10 rounded-2xl border border-slate-200 bg-[color:var(--panel)] flex items-center justify-center">
-            <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8">
-              <path d="M4 7h16M4 12h16M4 17h16" />
-            </svg>
+            <SlidersHorizontal size={20} weight="regular" />
           </span>
           Preferences
         </button>
@@ -191,12 +184,7 @@ export default function Sidebar() {
                 onClick={() => signIn("google")}
                 className="pill-button bg-slate-900 text-white cursor-pointer inline-flex items-center gap-2"
               >
-                <svg viewBox="0 0 24 24" className="h-4 w-4" aria-hidden="true">
-                  <path
-                    d="M12.2 10.2v3.6h5.1c-.2 1.2-1.6 3.5-5.1 3.5a5.9 5.9 0 0 1 0-11.8c2.1 0 3.5.9 4.3 1.7l2.9-2.8C17.6 2.7 15.1 1.5 12.2 1.5a10.5 10.5 0 1 0 0 21c6.1 0 10.2-4.3 10.2-10.3 0-.7-.1-1.2-.2-1.7H12.2Z"
-                    fill="currentColor"
-                  />
-                </svg>
+                <GoogleLogo size={16} weight="regular" />
                 Sign in
               </button>
             )}
@@ -214,17 +202,12 @@ export default function Sidebar() {
         </p>
         <button
           type="button"
-          onClick={() => signIn("google")}
-          className="mt-4 pill-button bg-slate-900 text-white cursor-pointer inline-flex items-center gap-2"
-        >
-          <svg viewBox="0 0 24 24" className="h-4 w-4" aria-hidden="true">
-            <path
-              d="M12.2 10.2v3.6h5.1c-.2 1.2-1.6 3.5-5.1 3.5a5.9 5.9 0 0 1 0-11.8c2.1 0 3.5.9 4.3 1.7l2.9-2.8C17.6 2.7 15.1 1.5 12.2 1.5a10.5 10.5 0 1 0 0 21c6.1 0 10.2-4.3 10.2-10.3 0-.7-.1-1.2-.2-1.7H12.2Z"
-              fill="currentColor"
-            />
-          </svg>
-          Continue with Google
-        </button>
+        onClick={() => signIn("google")}
+        className="mt-4 pill-button bg-slate-900 text-white cursor-pointer inline-flex items-center gap-2"
+      >
+        <GoogleLogo size={16} weight="regular" />
+        Continue with Google
+      </button>
       </Modal>
 
       <Modal
