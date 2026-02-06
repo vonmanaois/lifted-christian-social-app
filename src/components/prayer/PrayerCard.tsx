@@ -38,6 +38,7 @@ type CommentUser = {
   _id?: string | null;
   name?: string | null;
   image?: string | null;
+  username?: string | null;
 };
 
 type Comment = {
@@ -655,15 +656,44 @@ export default function PrayerCard({ prayer }: PrayerCardProps) {
                         index === 0 ? "" : "border-t border-[color:var(--panel-border)]"
                       }`}
                     >
-                    <div className="h-9 w-9 rounded-full bg-slate-200 flex items-center justify-center text-xs font-semibold text-slate-500">
-                      {(comment.userId?.name?.[0] ?? "U").toUpperCase()}
-                    </div>
+                    <a
+                      href={
+                        comment.userId?.username
+                          ? `/profile/${comment.userId.username}`
+                          : "/profile"
+                      }
+                      className="h-9 w-9 rounded-full bg-slate-200 flex items-center justify-center text-xs font-semibold text-slate-500 cursor-pointer overflow-hidden"
+                    >
+                      {comment.userId?.image ? (
+                        <Image
+                          src={comment.userId.image}
+                          alt={comment.userId?.name ?? "User"}
+                          width={36}
+                          height={36}
+                          className="h-full w-full object-cover"
+                        />
+                      ) : (
+                        (comment.userId?.name?.[0] ?? "U").toUpperCase()
+                      )}
+                    </a>
                     <div className="flex-1">
                       <div className="flex flex-wrap items-center justify-between gap-2">
                         <div className="flex items-center gap-2">
-                          <p className="text-xs font-semibold text-[color:var(--ink)]">
+                          <a
+                            href={
+                              comment.userId?.username
+                                ? `/profile/${comment.userId.username}`
+                                : "/profile"
+                            }
+                            className="text-xs font-semibold text-[color:var(--ink)] cursor-pointer hover:underline"
+                          >
                             {comment.userId?.name ?? "User"}
-                          </p>
+                          </a>
+                          {comment.userId?.username && (
+                            <span className="text-xs text-[color:var(--subtle)]">
+                              @{comment.userId.username}
+                            </span>
+                          )}
                           <p className="text-xs text-[color:var(--subtle)]">
                             {formatPostTime(comment.createdAt)}
                           </p>
