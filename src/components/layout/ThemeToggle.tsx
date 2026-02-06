@@ -27,9 +27,12 @@ export default function ThemeToggle() {
         const response = await fetch("/api/user/theme", { cache: "no-store" });
         if (!response.ok) return;
         const data = (await response.json()) as { theme?: string };
-        if (data.theme && data.theme !== theme && data.theme !== lastRequestedTheme.current) {
-          setTheme(data.theme);
+        if (!data.theme || data.theme === theme) return;
+        if (lastRequestedTheme.current && data.theme !== lastRequestedTheme.current) {
+          return;
         }
+        setTheme(data.theme);
+        lastRequestedTheme.current = null;
       } catch (error) {
         console.error(error);
       }
@@ -52,6 +55,7 @@ export default function ThemeToggle() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ theme: value }),
       });
+      lastRequestedTheme.current = null;
     } catch (error) {
       console.error(error);
     } finally {
