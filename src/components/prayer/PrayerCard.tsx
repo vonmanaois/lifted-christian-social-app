@@ -6,6 +6,7 @@ import { useState } from "react";
 export type PrayerUser = {
   name?: string | null;
   image?: string | null;
+  username?: string | null;
 };
 
 export type Prayer = {
@@ -136,9 +137,18 @@ export default function PrayerCard({ prayer }: PrayerCardProps) {
       <div className="flex-1">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <p className="text-sm font-semibold text-[color:var(--ink)]">
-              {prayer.isAnonymous ? "Anonymous" : prayer.user?.name ?? "User"}
-            </p>
+            {prayer.isAnonymous ? (
+              <p className="text-sm font-semibold text-[color:var(--ink)]">
+                Anonymous
+              </p>
+            ) : (
+              <a
+                href={prayer.user?.username ? `/profile/${prayer.user.username}` : "/profile"}
+                className="text-sm font-semibold text-[color:var(--ink)] hover:underline"
+              >
+                {prayer.user?.name ?? "User"}
+              </a>
+            )}
             <p className="text-xs text-[color:var(--subtle)]">
               {new Date(prayer.createdAt).toLocaleString()}
             </p>

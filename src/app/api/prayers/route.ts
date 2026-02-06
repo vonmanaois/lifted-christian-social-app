@@ -16,7 +16,7 @@ export async function GET(req: Request) {
   const prayers = await PrayerModel.find(filter)
     .sort({ createdAt: -1 })
     .limit(50)
-    .populate("userId", "name image")
+    .populate("userId", "name image username")
     .lean();
 
   const sanitized = await Promise.all(

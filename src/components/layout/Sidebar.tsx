@@ -5,6 +5,7 @@ import { signIn, signOut, useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Modal from "@/components/layout/Modal";
 import ThemeToggle from "@/components/layout/ThemeToggle";
+import UserSearch from "@/components/layout/UserSearch";
 
 export default function Sidebar() {
   const { data: session, status } = useSession();
@@ -82,6 +83,8 @@ export default function Sidebar() {
           <p className="text-xs text-[color:var(--subtle)]">Prayer Wall</p>
         </div>
       </button>
+
+      <UserSearch />
 
       <div className="flex flex-col gap-3 text-base text-[color:var(--ink)]">
         <button
