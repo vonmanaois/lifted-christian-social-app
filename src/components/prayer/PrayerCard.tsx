@@ -19,6 +19,7 @@ export type Prayer = {
   commentCount?: number;
   user?: PrayerUser | null;
   userId?: string;
+  isOwner?: boolean;
 };
 
 type PrayerCardProps = {
@@ -56,13 +57,15 @@ export default function PrayerCard({ prayer }: PrayerCardProps) {
   const [commentText, setCommentText] = useState("");
   const [commentCount, setCommentCount] = useState(prayer.commentCount ?? 0);
   const [hasPrayed, setHasPrayed] = useState(
-    session?.user?.id ? prayer.prayedBy.includes(session.user.id) : false
+    session?.user?.id ? prayer.prayedBy.includes(String(session.user.id)) : false
   );
-  const isOwner = Boolean(
-    session?.user?.id &&
-      prayer.userId &&
-      String(prayer.userId) === String(session.user.id)
-  );
+  const isOwner =
+    prayer.isOwner ??
+    Boolean(
+      session?.user?.id &&
+        prayer.userId &&
+        String(prayer.userId) === String(session.user.id)
+    );
 
 
   const { data: comments = [], isLoading: isLoadingComments } = useQuery({
@@ -84,6 +87,13 @@ export default function PrayerCard({ prayer }: PrayerCardProps) {
       setCommentCount(comments.length);
     }
   }, [comments.length, showComments]);
+
+  useEffect(() => {
+    if (!session?.user?.id) return;
+    if (prayer.prayedBy.includes(String(session.user.id))) {
+      setHasPrayed(true);
+    }
+  }, [prayer.prayedBy, session?.user?.id]);
 
   const commentMutation = useMutation({
     mutationFn: async () => {
@@ -126,6 +136,19 @@ export default function PrayerCard({ prayer }: PrayerCardProps) {
         throw new Error(message);
       }
       return (await response.json()) as { count: number };
+    },
+    onMutate: async () => {
+      if (hasPrayed) return { previousCount: count, previousHasPrayed: hasPrayed };
+
+      setHasPrayed(true);
+      setCount((prev) => prev + 1);
+      return { previousCount: count, previousHasPrayed: hasPrayed };
+    },
+    onError: (_error, _variables, context) => {
+      if (context) {
+        setHasPrayed(context.previousHasPrayed);
+        setCount(context.previousCount);
+      }
     },
     onSuccess: (data) => {
       setCount(data.count);

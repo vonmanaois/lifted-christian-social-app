@@ -27,21 +27,33 @@ export async function GET(req: Request) {
 
   const sanitized = await Promise.all(
     prayers.map(async (prayer) => {
-      const { userId, ...rest } = prayer as typeof prayer & {
-        userId?: { name?: string; image?: string; _id?: { toString: () => string } } | null;
+      const { userId: userRef, ...rest } = prayer as typeof prayer & {
+        userId?: { name?: string; image?: string; username?: string; _id?: { toString: () => string } } | null;
       };
 
-      const rawUserId = (prayer as { userId?: { _id?: { toString: () => string } } | { toString: () => string } }).userId;
-      const userIdString =
-        typeof rawUserId === "string"
-          ? rawUserId
-          : rawUserId && typeof (rawUserId as { toString?: () => string }).toString === "function"
-            ? (rawUserId as { toString: () => string }).toString()
-            : rawUserId && typeof (rawUserId as { _id?: { toString: () => string } })._id?.toString === "function"
-              ? (rawUserId as { _id: { toString: () => string } })._id.toString()
-              : null;
+      const rawUserId = (prayer as {
+        userId?: { _id?: { toString: () => string } } | { toString: () => string } | string | null;
+      }).userId;
 
-      const base = { ...rest, _id: prayer._id.toString(), userId: userIdString };
+      let userIdString: string | null = null;
+      if (typeof rawUserId === "string") {
+        userIdString = rawUserId;
+      } else if (
+        rawUserId &&
+        typeof (rawUserId as { _id?: { toString: () => string } })._id?.toString === "function"
+      ) {
+        userIdString = (rawUserId as { _id: { toString: () => string } })._id.toString();
+      } else if (rawUserId && typeof (rawUserId as { toString?: () => string }).toString === "function") {
+        const asString = (rawUserId as { toString: () => string }).toString();
+        userIdString = asString !== "[object Object]" ? asString : null;
+      }
+
+      const base = {
+        ...rest,
+        _id: prayer._id.toString(),
+        userId: userIdString,
+        isOwner: Boolean(session?.user?.id && userIdString && session.user.id === userIdString),
+      };
 
       if (prayer.isAnonymous) {
         const commentCount = await CommentModel.countDocuments({
@@ -53,7 +65,7 @@ export async function GET(req: Request) {
       const commentCount = await CommentModel.countDocuments({
         prayerId: prayer._id,
       });
-      return { ...base, user: userId ?? null, commentCount };
+      return { ...base, user: userRef ?? null, commentCount };
     })
   );
 
