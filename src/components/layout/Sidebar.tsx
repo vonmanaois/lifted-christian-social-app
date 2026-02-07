@@ -8,6 +8,7 @@ import {
   BellSimple,
   GoogleLogo,
   House,
+  Info,
   MagnifyingGlass,
   Plus,
   SlidersHorizontal,
@@ -20,10 +21,9 @@ import UserSearch from "@/components/layout/UserSearch";
 export default function Sidebar() {
   const { data: session, status } = useSession();
   const isAuthenticated = status === "authenticated";
-  const [showThemes, setShowThemes] = useState(false);
+  const [showPreferences, setShowPreferences] = useState(false);
   const [showSignIn, setShowSignIn] = useState(false);
   const [profileUsername, setProfileUsername] = useState<string | null>(null);
-  const prefsRef = useRef<HTMLDivElement | null>(null);
   const prefsButtonRef = useRef<HTMLButtonElement | null>(null);
   const mobilePrefsButtonRef = useRef<HTMLButtonElement | null>(null);
   const router = useRouter();
@@ -108,85 +108,38 @@ export default function Sidebar() {
     return () => window.removeEventListener("open-signin", handleOpenSignIn);
   }, []);
 
-  useEffect(() => {
-    if (!showThemes) return;
-    const handleClickOutside = (event: MouseEvent) => {
-      if (!prefsRef.current) return;
-      if (
-        prefsButtonRef.current?.contains(event.target as Node) ||
-        mobilePrefsButtonRef.current?.contains(event.target as Node)
-      ) {
-        return;
-      }
-      if (!prefsRef.current.contains(event.target as Node)) {
-        setShowThemes(false);
-      }
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [showThemes]);
-
   return (
     <>
       <div className="lg:hidden sticky top-0 z-40 bg-[color:var(--panel)]/95 backdrop-blur">
-        <div className="relative flex items-center justify-center px-4 py-3">
+        <div className="flex items-center justify-between px-4 py-3 h-12">
+          <button
+            type="button"
+            onClick={() => router.push("/why-lifted")}
+            className="h-10 w-10 rounded-xl bg-[color:var(--panel)] text-[color:var(--ink)] hover:text-[color:var(--accent)]"
+            aria-label="Why Lifted"
+          >
+            <Info size={22} weight="regular" />
+          </button>
           <button
             type="button"
             onClick={() => router.push("/")}
-            className="flex items-center gap-2 cursor-pointer"
+            className="flex items-center gap-2 cursor-pointer min-w-0"
           >
             <div className="h-9 w-9 rounded-full bg-gradient-to-br from-[#2d6cdf] to-[#9b6cff]" />
-            <span className="text-sm font-semibold text-[color:var(--ink)]">
+            <span className="hidden sm:inline text-sm font-semibold text-[color:var(--ink)] whitespace-nowrap">
               Lifted
             </span>
           </button>
           <button
             type="button"
             ref={mobilePrefsButtonRef}
-            onClick={() => setShowThemes((prev) => !prev)}
-            className="absolute right-4 top-1/2 -translate-y-1/2 h-8 w-8 rounded-xl bg-[color:var(--panel)] text-[color:var(--ink)] hover:text-[color:var(--accent)]"
+            onClick={() => setShowPreferences(true)}
+            className="h-10 w-10 rounded-xl bg-[color:var(--panel)] text-[color:var(--ink)] hover:text-[color:var(--accent)]"
             aria-label="Preferences"
           >
-            <SlidersHorizontal size={18} weight="regular" />
+            <SlidersHorizontal size={22} weight="regular" />
           </button>
         </div>
-        {showThemes && (
-          <div ref={prefsRef} className="px-4 pb-4">
-            <div className="panel p-4 flex flex-col gap-4">
-              <ThemeToggle />
-              <div className="mt-2 border-t border-slate-200 pt-4">
-                {isAuthenticated ? (
-                  <div className="flex flex-col gap-3">
-                    <div>
-                      <p className="text-sm font-semibold text-[color:var(--ink)]">
-                        {session.user?.name ?? "Signed in"}
-                      </p>
-                      <p className="text-xs text-[color:var(--subtle)]">
-                        {session.user?.email}
-                      </p>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => signOut()}
-                      className="pill-button border border-slate-200 text-[color:var(--ink)] cursor-pointer"
-                    >
-                      Sign out
-                    </button>
-                  </div>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => signIn("google")}
-                    className="pill-button bg-slate-900 text-white cursor-pointer inline-flex items-center gap-2"
-                  >
-                    <GoogleLogo size={16} weight="regular" />
-                    Sign in
-                  </button>
-                )}
-              </div>
-            </div>
-          </div>
-        )}
       </div>
       <aside className="hidden lg:flex p-5 flex-col gap-5 h-fit items-center text-center lg:items-start lg:text-left bg-transparent border-none shadow-none">
       <button
@@ -289,14 +242,20 @@ export default function Sidebar() {
         </button>
         <button
           type="button"
+          className="flex items-center gap-3 cursor-pointer text-[color:var(--ink)] hover:text-[color:var(--accent)]"
+          onClick={() => router.push("/why-lifted")}
+        >
+          <span className="h-10 w-10 rounded-2xl bg-[color:var(--panel)] flex items-center justify-center">
+            <Info size={22} weight="regular" />
+          </span>
+          <span className="hidden lg:inline">Why Lifted</span>
+        </button>
+        <button
+          type="button"
           ref={prefsButtonRef}
           className="flex items-center gap-3 cursor-pointer text-[color:var(--ink)] hover:text-[color:var(--accent)]"
           onClick={() => {
-            if (showThemes) {
-              setShowThemes(false);
-              return;
-            }
-            setShowThemes(true);
+            setShowPreferences(true);
           }}
         >
           <span className="h-10 w-10 rounded-2xl bg-[color:var(--panel)] flex items-center justify-center">
@@ -306,14 +265,34 @@ export default function Sidebar() {
         </button>
       </div>
 
-      {showThemes && (
-        <div
-          ref={prefsRef}
-          className="hidden lg:block mt-2 pref-animate"
+      </aside>
+
+      <Modal
+        title="Sign in"
+        isOpen={showSignIn}
+        onClose={() => setShowSignIn(false)}
+      >
+        <p className="text-sm text-[color:var(--subtle)]">
+          Sign in with Google to create a profile and post prayers.
+        </p>
+        <button
+          type="button"
+          onClick={() => signIn("google")}
+          className="mt-4 pill-button bg-slate-900 text-white cursor-pointer inline-flex items-center gap-2"
         >
-        <div className="panel p-4 flex flex-col gap-4 ml-6">
+          <GoogleLogo size={16} weight="regular" />
+          Continue with Google
+        </button>
+      </Modal>
+
+      <Modal
+        title="Preferences"
+        isOpen={showPreferences}
+        onClose={() => setShowPreferences(false)}
+      >
+        <div className="flex flex-col gap-4">
           <ThemeToggle />
-          <div className="mt-2 border-t border-slate-200 pt-4">
+          <div className="border-t border-slate-200 pt-4">
             {isAuthenticated ? (
               <div className="flex flex-col gap-3">
                 <div>
@@ -344,28 +323,7 @@ export default function Sidebar() {
             )}
           </div>
         </div>
-      </div>
-      )}
-
-      <Modal
-        title="Sign in"
-        isOpen={showSignIn}
-        onClose={() => setShowSignIn(false)}
-      >
-        <p className="text-sm text-[color:var(--subtle)]">
-          Sign in with Google to create a profile and post prayers.
-        </p>
-        <button
-          type="button"
-        onClick={() => signIn("google")}
-        className="mt-4 pill-button bg-slate-900 text-white cursor-pointer inline-flex items-center gap-2"
-      >
-        <GoogleLogo size={16} weight="regular" />
-        Continue with Google
-      </button>
       </Modal>
-
-      </aside>
 
       <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-40 border-t border-[color:var(--panel-border)] bg-[color:var(--panel)]/95 backdrop-blur">
         <div className="flex items-center justify-around px-5 py-3 text-[color:var(--ink)]">
