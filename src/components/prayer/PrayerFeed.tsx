@@ -62,6 +62,7 @@ export default function PrayerFeed({ refreshKey, userId }: PrayerFeedProps) {
   const [pullDistance, setPullDistance] = useState(0);
   const [isPulling, setIsPulling] = useState(false);
   const threshold = 60;
+  const loadMoreRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     const handler = () => {
@@ -70,6 +71,23 @@ export default function PrayerFeed({ refreshKey, userId }: PrayerFeedProps) {
     window.addEventListener("feed:refresh", handler);
     return () => window.removeEventListener("feed:refresh", handler);
   }, [refetch]);
+
+  useEffect(() => {
+    if (!hasNextPage) return;
+    const node = loadMoreRef.current;
+    if (!node) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const entry = entries[0];
+        if (entry?.isIntersecting && hasNextPage && !isFetchingNextPage) {
+          fetchNextPage();
+        }
+      },
+      { rootMargin: "200px" }
+    );
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [fetchNextPage, hasNextPage, isFetchingNextPage]);
 
   const prayers = data?.pages.flatMap((page) => page.items) ?? [];
 
@@ -142,14 +160,13 @@ export default function PrayerFeed({ refreshKey, userId }: PrayerFeedProps) {
         <PrayerCard key={prayer._id} prayer={prayer} />
       ))}
       {hasNextPage && (
-        <button
-          type="button"
-          onClick={() => fetchNextPage()}
-          disabled={isFetchingNextPage}
-          className="mt-4 post-button bg-transparent border border-[color:var(--panel-border)] text-[color:var(--ink)]"
-        >
-          {isFetchingNextPage ? "Loading..." : "Load more"}
-        </button>
+        <div ref={loadMoreRef} className="flex items-center justify-center py-4">
+          {isFetchingNextPage ? (
+            <div className="h-8 w-8 animate-spin rounded-full border-2 border-[color:var(--panel-border)] border-t-[color:var(--accent)]" />
+          ) : (
+            <div className="h-2 w-2 rounded-full bg-[color:var(--panel-border)]" />
+          )}
+        </div>
       )}
     </div>
   );

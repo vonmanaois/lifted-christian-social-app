@@ -21,6 +21,7 @@ export default function WordForm({
   const { data: session } = useSession();
   const [content, setContent] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
   const textAreaRef = useRef<HTMLTextAreaElement | null>(null);
   const isDirty = content.trim().length > 0;
 
@@ -38,6 +39,7 @@ export default function WordForm({
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
+    setSubmitError(null);
 
     if (!session?.user) {
       if (typeof window !== "undefined") {
@@ -58,7 +60,11 @@ export default function WordForm({
       });
 
       if (!response.ok) {
-        throw new Error("Failed to post word");
+        const payload = (await response.json().catch(() => null)) as
+          | { error?: string }
+          | null;
+        setSubmitError(payload?.error ?? "Failed to post word.");
+        return;
       }
 
       setContent("");
@@ -121,6 +127,9 @@ export default function WordForm({
           {isSubmitting ? "Posting..." : !content.trim() ? "⊘ Post" : "Post"}
         </button>
       </div>
+      {submitError && (
+        <p className="text-xs text-[color:var(--danger)]">{submitError}</p>
+      )}
     </form>
   );
 }

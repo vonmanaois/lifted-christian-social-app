@@ -4,6 +4,7 @@ import { memo, useEffect, useRef, useState } from "react";
 import { signIn, useSession } from "next-auth/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ChatCircle, DotsThreeOutline, Heart } from "@phosphor-icons/react";
+import { useRouter } from "next/navigation";
 import Avatar from "@/components/ui/Avatar";
 import Modal from "@/components/layout/Modal";
 
@@ -37,6 +38,7 @@ type WordComment = {
 
 type WordCardProps = {
   word: Word;
+  defaultShowComments?: boolean;
 };
 
 const formatPostTime = (timestamp: string) => {
@@ -65,8 +67,9 @@ const formatPostTime = (timestamp: string) => {
   return new Intl.DateTimeFormat("en-US", options).format(createdAt);
 };
 
-const WordCard = ({ word }: WordCardProps) => {
+const WordCard = ({ word, defaultShowComments = false }: WordCardProps) => {
   const { data: session } = useSession();
+  const router = useRouter();
   const queryClient = useQueryClient();
   const normalizeId = (raw: Word["_id"]) => {
     if (typeof raw === "string") {
@@ -84,7 +87,7 @@ const WordCard = ({ word }: WordCardProps) => {
   );
   const [likeBurst, setLikeBurst] = useState(false);
   const [commentCount, setCommentCount] = useState(word.commentCount ?? 0);
-  const [showComments, setShowComments] = useState(false);
+  const [showComments, setShowComments] = useState(defaultShowComments);
   const [commentText, setCommentText] = useState("");
   const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
   const [editingCommentText, setEditingCommentText] = useState("");
@@ -460,6 +463,14 @@ const WordCard = ({ word }: WordCardProps) => {
     commentMutation.mutate();
   };
 
+  const handleCardClick = (event: React.MouseEvent) => {
+    const target = event.target as HTMLElement | null;
+    if (!target) return;
+    if (target.closest("button, a, input, textarea, select, [data-ignore-view]")) return;
+    if (!word.user?.username) return;
+    router.push(`/${word.user.username}/${wordId}`);
+  };
+
   useEffect(() => {
     if (!showComments) return;
     const handleClickOutside = (event: MouseEvent) => {
@@ -508,15 +519,15 @@ const WordCard = ({ word }: WordCardProps) => {
   };
 
   return (
-    <article className="wall-card flex gap-3 rounded-none">
+    <article className="wall-card flex gap-3 rounded-none" onClick={handleCardClick}>
       <div className="avatar-ring">
         <Avatar
           src={word.user?.image ?? null}
           alt={word.user?.name ?? "User"}
-          size={48}
+          size={32}
           href={word.user?.username ? `/profile/${word.user.username}` : "/profile"}
           fallback={(word.user?.name?.[0] ?? "W").toUpperCase()}
-          className="avatar-core cursor-pointer"
+          className="avatar-core cursor-pointer h-8 w-8 sm:h-12 sm:w-12"
         />
       </div>
       <div className="flex-1">
@@ -842,6 +853,7 @@ const WordCard = ({ word }: WordCardProps) => {
             </div>
           </div>
         )}
+
       </div>
 
       <Modal

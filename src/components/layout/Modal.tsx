@@ -18,26 +18,34 @@ export default function Modal({
 }: ModalProps) {
   const titleId = useId();
   const dialogRef = useRef<HTMLDivElement | null>(null);
+  const wasOpenRef = useRef(false);
 
   useEffect(() => {
-    if (!isOpen) return;
+    if (!isOpen) {
+      wasOpenRef.current = false;
+      return;
+    }
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
         onClose();
       }
     };
     document.addEventListener("keydown", handleKeyDown);
-    const timer = setTimeout(() => {
-      const dialog = dialogRef.current;
-      if (!dialog) return;
-      const focusable = dialog.querySelector<HTMLElement>(
-        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
-      );
-      (focusable ?? dialog).focus();
-    }, 0);
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    if (!wasOpenRef.current) {
+      timer = setTimeout(() => {
+        const dialog = dialogRef.current;
+        if (!dialog) return;
+        const focusable = dialog.querySelector<HTMLElement>(
+          'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+        );
+        (focusable ?? dialog).focus();
+      }, 0);
+      wasOpenRef.current = true;
+    }
     return () => {
       document.removeEventListener("keydown", handleKeyDown);
-      clearTimeout(timer);
+      if (timer) clearTimeout(timer);
     };
   }, [isOpen, onClose]);
 

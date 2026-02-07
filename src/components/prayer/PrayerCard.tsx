@@ -2,8 +2,10 @@
 
 import { signIn, useSession } from "next-auth/react";
 import { memo, useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Avatar from "@/components/ui/Avatar";
+import Modal from "@/components/layout/Modal";
 import {
   BookOpenText,
   ChatCircle,
@@ -13,7 +15,6 @@ import {
   NotePencil,
   UserCircle,
 } from "@phosphor-icons/react";
-import Modal from "@/components/layout/Modal";
 
 export type PrayerUser = {
   name?: string | null;
@@ -38,6 +39,7 @@ export type Prayer = {
 
 type PrayerCardProps = {
   prayer: Prayer;
+  defaultShowComments?: boolean;
 };
 
 type CommentUser = {
@@ -80,8 +82,9 @@ const formatPostTime = (timestamp: string) => {
   return new Intl.DateTimeFormat("en-US", options).format(createdAt);
 };
 
-const PrayerCard = ({ prayer }: PrayerCardProps) => {
+const PrayerCard = ({ prayer, defaultShowComments = false }: PrayerCardProps) => {
   const { data: session } = useSession();
+  const router = useRouter();
   const queryClient = useQueryClient();
   const normalizeId = (raw: Prayer["_id"]) => {
     if (typeof raw === "string") {
@@ -95,7 +98,7 @@ const PrayerCard = ({ prayer }: PrayerCardProps) => {
   const prayerId = normalizeId(prayer._id);
   const [count, setCount] = useState(prayer.prayedBy.length);
   const [isPending, setIsPending] = useState(false);
-  const [showComments, setShowComments] = useState(false);
+  const [showComments, setShowComments] = useState(defaultShowComments);
   const [showCommentConfirm, setShowCommentConfirm] = useState(false);
   const [commentText, setCommentText] = useState("");
   const commentFormRef = useRef<HTMLDivElement | null>(null);
@@ -529,6 +532,18 @@ const PrayerCard = ({ prayer }: PrayerCardProps) => {
     });
   };
 
+  const handleCardClick = (event: React.MouseEvent) => {
+    const target = event.target as HTMLElement | null;
+    if (!target) return;
+    if (target.closest("button, a, input, textarea, select, [data-ignore-view]")) return;
+    if (prayer.isAnonymous) {
+      router.push(`/anonymous/${prayerId}`);
+      return;
+    }
+    if (!prayer.user?.username) return;
+    router.push(`/${prayer.user.username}/${prayerId}`);
+  };
+
   const handleCommentSubmit = async (event?: React.FormEvent) => {
     if (event) {
       event.preventDefault();
@@ -605,7 +620,7 @@ const PrayerCard = ({ prayer }: PrayerCardProps) => {
   };
 
   return (
-    <article className="wall-card flex gap-3 rounded-none">
+    <article className="wall-card flex gap-3 rounded-none" onClick={handleCardClick}>
       <div className="avatar-ring">
         {prayer.isAnonymous ? (
           <div className="avatar-core">
@@ -615,14 +630,14 @@ const PrayerCard = ({ prayer }: PrayerCardProps) => {
           <Avatar
             src={prayer.user?.image ?? null}
             alt={prayer.user?.name ?? "User"}
-            size={48}
+            size={32}
             href={
               prayer.user?.username
                 ? `/profile/${prayer.user.username}`
                 : "/profile"
             }
             fallback={(prayer.user?.name?.[0] ?? "U").toUpperCase()}
-            className="avatar-core cursor-pointer"
+            className="avatar-core cursor-pointer h-8 w-8 sm:h-12 sm:w-12"
           />
         )}
       </div>
@@ -766,7 +781,7 @@ const PrayerCard = ({ prayer }: PrayerCardProps) => {
               <NotePencil size={16} weight="regular" />
               Request
             </div>
-            <div className="mt-4 space-y-3 border-l-2 border-[color:var(--accent)] pl-3">
+            <div className="mt-4 space-y-3">
               {requestPoints.map((point, index) => (
                 <div key={`${point.title}-${index}`}>
                   <p className="text-[13px] sm:text-sm font-semibold text-[color:var(--ink)]">
@@ -785,7 +800,7 @@ const PrayerCard = ({ prayer }: PrayerCardProps) => {
               <BookOpenText size={16} weight="regular" />
               Prayer
             </div>
-            <p className="mt-4 border-l border-[color:var(--panel-border)] pl-4 text-[13px] sm:text-sm leading-relaxed text-[color:var(--ink)]">
+            <p className="mt-4 text-[13px] sm:text-sm leading-relaxed text-[color:var(--ink)]">
               {content}
             </p>
           </>
