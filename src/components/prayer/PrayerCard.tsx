@@ -108,6 +108,7 @@ export default function PrayerCard({ prayer }: PrayerCardProps) {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showEditConfirm, setShowEditConfirm] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
+  const [showSignIn, setShowSignIn] = useState(false);
   const [content, setContent] = useState(prayer.content);
   const [editText, setEditText] = useState(prayer.content);
   const menuRef = useRef<HTMLDivElement | null>(null);
@@ -218,6 +219,9 @@ export default function PrayerCard({ prayer }: PrayerCardProps) {
         }),
       });
       if (!response.ok) {
+        if (response.status === 401) {
+          setShowSignIn(true);
+        }
         throw new Error("Failed to post comment");
       }
     },
@@ -305,7 +309,7 @@ export default function PrayerCard({ prayer }: PrayerCardProps) {
           // ignore JSON parse errors
         }
         if (response.status === 401) {
-          signIn("google");
+          setShowSignIn(true);
         }
         throw new Error(message);
       }
@@ -330,7 +334,7 @@ export default function PrayerCard({ prayer }: PrayerCardProps) {
           // ignore JSON parse errors
         }
         if (response.status === 401) {
-          signIn("google");
+          setShowSignIn(true);
         }
         throw new Error(message);
       }
@@ -356,7 +360,10 @@ export default function PrayerCard({ prayer }: PrayerCardProps) {
   });
 
   const handlePray = async () => {
-    if (!session?.user?.id) return;
+    if (!session?.user?.id) {
+      setShowSignIn(true);
+      return;
+    }
 
     setIsPending(true);
 
@@ -388,7 +395,7 @@ export default function PrayerCard({ prayer }: PrayerCardProps) {
     event.preventDefault();
 
     if (!session?.user?.id) {
-      signIn("google");
+      setShowSignIn(true);
       return;
     }
 
@@ -608,33 +615,37 @@ export default function PrayerCard({ prayer }: PrayerCardProps) {
               )}
             </span>
           </button>
-          <div className="ml-auto meta-pill">
-            <span>Prayed</span>
-            <span className="font-semibold text-[color:var(--ink)]">
-              {count}
-            </span>
-          </div>
+          {count > 0 && (
+            <div className="ml-auto text-xs text-[color:var(--subtle)]">
+              <span className="font-semibold text-[color:var(--ink)]">
+                {count}
+              </span>{" "}
+              people prayed
+            </div>
+          )}
         </div>
 
         {showComments && (
           <div ref={commentFormRef} className="mt-5 border-t border-slate-100 pt-4">
-            <form onSubmit={handleCommentSubmit} className="flex flex-col gap-3">
-              <textarea
-                className="soft-input comment-input min-h-[70px] text-sm"
-                placeholder="Write a comment..."
-                value={commentText}
-                ref={commentInputRef}
-                onChange={(event) => setCommentText(event.target.value)}
-              />
-              <div className="flex justify-end">
-                <button
-                  type="submit"
-                  className="rounded-lg px-3 py-2 text-xs font-semibold bg-[color:var(--accent)] text-[color:var(--accent-contrast)] cursor-pointer"
-                >
-                  Post comment
-                </button>
-              </div>
-            </form>
+            {session?.user?.id && (
+              <form onSubmit={handleCommentSubmit} className="flex flex-col gap-3">
+                <textarea
+                  className="soft-input comment-input min-h-[70px] text-sm"
+                  placeholder="Write a comment..."
+                  value={commentText}
+                  ref={commentInputRef}
+                  onChange={(event) => setCommentText(event.target.value)}
+                />
+                <div className="flex justify-end">
+                  <button
+                    type="submit"
+                    className="rounded-lg px-3 py-2 text-xs font-semibold bg-[color:var(--accent)] text-[color:var(--accent-contrast)] cursor-pointer"
+                  >
+                    Post comment
+                  </button>
+                </div>
+              </form>
+            )}
 
             <div className="mt-4 flex flex-col gap-3 text-sm">
               {isLoadingComments ? (
@@ -961,6 +972,23 @@ export default function PrayerCard({ prayer }: PrayerCardProps) {
             Discard
           </button>
         </div>
+      </Modal>
+
+      <Modal
+        title="Sign in"
+        isOpen={showSignIn}
+        onClose={() => setShowSignIn(false)}
+      >
+        <p className="text-sm text-[color:var(--subtle)]">
+          Sign in with Google to interact with prayers.
+        </p>
+        <button
+          type="button"
+          onClick={() => signIn("google")}
+          className="mt-4 pill-button bg-slate-900 text-white cursor-pointer inline-flex items-center gap-2"
+        >
+          Continue with Google
+        </button>
       </Modal>
     </article>
   );
