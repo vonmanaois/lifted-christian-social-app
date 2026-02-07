@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth";
 import dbConnect from "@/lib/db";
 import CommentModel from "@/models/Comment";
 import PrayerModel from "@/models/Prayer";
+import UserModel from "@/models/User";
 import { Types } from "mongoose";
 import { revalidateTag, unstable_cache } from "next/cache";
 import { z } from "zod";
@@ -43,18 +44,26 @@ export async function GET(req: Request) {
     const prayers = await PrayerModel.find(filter)
       .sort({ createdAt: -1, _id: -1 })
       .limit(limit + 1)
-      .populate("userId", "name image username")
       .lean();
 
     const hasMore = prayers.length > limit;
     const items = hasMore ? prayers.slice(0, limit) : prayers;
 
+    const userIds = items
+      .filter((prayer) => !prayer.isAnonymous && prayer.userId)
+      .map((prayer) => String(prayer.userId));
+    const uniqueUserIds = Array.from(new Set(userIds));
+    const users = uniqueUserIds.length
+      ? await UserModel.find({ _id: { $in: uniqueUserIds } })
+          .select("name image username")
+          .lean()
+      : [];
+    const userMap = new Map(
+      users.map((user) => [String(user._id), { name: user.name, image: user.image, username: user.username }])
+    );
+
     const sanitized = await Promise.all(
       items.map(async (prayer) => {
-        const { userId: userRef, ...rest } = prayer as typeof prayer & {
-          userId?: { name?: string; image?: string; username?: string; _id?: { toString: () => string } } | null;
-        };
-
         const rawUserId = (prayer as {
           userId?: { _id?: { toString: () => string } } | { toString: () => string } | string | null;
         }).userId;
@@ -73,7 +82,7 @@ export async function GET(req: Request) {
         }
 
         const base = {
-          ...rest,
+          ...prayer,
           _id: prayer._id.toString(),
           userId: userIdString,
           isOwner: Boolean(viewerId && userIdString && viewerId === userIdString),
@@ -87,7 +96,14 @@ export async function GET(req: Request) {
           return { ...base, user: null, commentCount };
         }
 
-        return { ...base, user: userRef ?? null, commentCount };
+        const user =
+          userMap.get(userIdString ?? "") ?? {
+            name: prayer.authorName,
+            image: prayer.authorImage,
+            username: prayer.authorUsername,
+          };
+
+        return { ...base, user, commentCount };
       })
     );
 
@@ -150,9 +166,16 @@ export async function POST(req: Request) {
 
   await dbConnect();
 
+  const author = await UserModel.findById(session.user.id)
+    .select("name image username")
+    .lean();
+
   const prayer = await PrayerModel.create({
     content,
     userId: session.user.id,
+    authorName: author?.name ?? null,
+    authorUsername: author?.username ?? null,
+    authorImage: author?.image ?? null,
     isAnonymous,
     prayedBy: [],
     expiresAt,

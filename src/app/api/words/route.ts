@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth";
 import dbConnect from "@/lib/db";
 import WordModel from "@/models/Word";
 import WordCommentModel from "@/models/WordComment";
+import UserModel from "@/models/User";
 import { Types } from "mongoose";
 import { revalidateTag, unstable_cache } from "next/cache";
 import { z } from "zod";
@@ -51,18 +52,26 @@ export async function GET(req: Request) {
     const words = await WordModel.find(filter)
       .sort({ createdAt: -1, _id: -1 })
       .limit(limit + 1)
-      .populate("userId", "name image username")
       .lean();
 
     const hasMore = words.length > limit;
     const items = hasMore ? words.slice(0, limit) : words;
 
+    const userIds = items
+      .filter((word) => word.userId)
+      .map((word) => String(word.userId));
+    const uniqueUserIds = Array.from(new Set(userIds));
+    const users = uniqueUserIds.length
+      ? await UserModel.find({ _id: { $in: uniqueUserIds } })
+          .select("name image username")
+          .lean()
+      : [];
+    const userMap = new Map(
+      users.map((user) => [String(user._id), { name: user.name, image: user.image, username: user.username }])
+    );
+
     const sanitized = await Promise.all(
       items.map(async (word) => {
-        const { userId: author, ...rest } = word as typeof word & {
-          userId?: { name?: string; image?: string; username?: string; _id?: { toString: () => string } } | null;
-        };
-
         const rawUserId = (word as {
           userId?: { _id?: { toString: () => string } } | { toString: () => string } | string | null;
         }).userId;
@@ -82,10 +91,18 @@ export async function GET(req: Request) {
         const commentCount = await WordCommentModel.countDocuments({
           wordId: word._id,
         });
+
+        const user =
+          userMap.get(userIdString ?? "") ?? {
+            name: word.authorName,
+            image: word.authorImage,
+            username: word.authorUsername,
+          };
+
         return {
-          ...rest,
+          ...word,
           _id: word._id.toString(),
-          user: author ?? null,
+          user,
           commentCount,
           userId: userIdString,
           isOwner: Boolean(viewerId && userIdString && viewerId === userIdString),
@@ -142,9 +159,16 @@ export async function POST(req: Request) {
 
   await dbConnect();
 
+  const author = await UserModel.findById(session.user.id)
+    .select("name image username")
+    .lean();
+
   const word = await WordModel.create({
     content,
     userId: session.user.id,
+    authorName: author?.name ?? null,
+    authorUsername: author?.username ?? null,
+    authorImage: author?.image ?? null,
   });
 
   revalidateTag("words-feed");

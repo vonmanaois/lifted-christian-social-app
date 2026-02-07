@@ -4,6 +4,9 @@ const WordSchema = new Schema(
   {
     content: { type: String, required: true, trim: true, maxlength: 2000 },
     userId: { type: Schema.Types.ObjectId, ref: "User", required: true },
+    authorName: { type: String, trim: true },
+    authorUsername: { type: String, trim: true },
+    authorImage: { type: String, trim: true },
     likedBy: [{ type: Schema.Types.ObjectId, ref: "User" }],
   },
   { timestamps: true }
