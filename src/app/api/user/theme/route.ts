@@ -4,7 +4,7 @@ import { authOptions } from "@/lib/auth";
 import dbConnect from "@/lib/db";
 import UserModel from "@/models/User";
 
-const allowedThemes = ["light", "dark", "midnight", "purple-rose"] as const;
+const allowedThemes = ["light", "dark", "midnight", "purple-rose", "banana"] as const;
 
 type ThemeValue = (typeof allowedThemes)[number];
 

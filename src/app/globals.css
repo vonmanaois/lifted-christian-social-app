@@ -32,6 +32,22 @@ html[data-theme="midnight"] {
   --danger: #ff8a8a;
 }
 
+html[data-theme="banana"] {
+  color-scheme: light;
+  --ink: #2f2108;
+  --subtle: #6f5524;
+  --panel: #fff6da;
+  --panel-border: #f0d69a;
+  --surface: #ffeab3;
+  --surface-strong: #f6d98b;
+  --menu: #ffefc4;
+  --accent: #e3a400;
+  --accent-strong: #c98700;
+  --accent-contrast: #2a1a00;
+  --ring: rgba(227, 164, 0, 0.25);
+  --danger: #c73f36;
+}
+
 html[data-theme="dark"] {
   color-scheme: dark;
   --ink: #f7f7f7;
@@ -81,6 +97,10 @@ body {
 }
 
 html[data-theme="midnight"] body {
+  background: var(--surface);
+}
+
+html[data-theme="banana"] body {
   background: var(--surface);
 }
 
@@ -184,12 +204,34 @@ html[data-theme="dark"] .soft-input:focus {
   color: var(--ink);
 }
 
+html[data-theme="banana"] .soft-input {
+  background: rgba(90, 60, 10, 0.08);
+  color: var(--ink);
+}
+
+html[data-theme="banana"] .soft-input::placeholder {
+  color: rgba(111, 85, 36, 0.8);
+}
+
+html[data-theme="banana"] .soft-input:focus {
+  background: #fff7dc;
+  color: var(--ink);
+}
+
 html[data-theme="midnight"] .panel-glass {
   background: linear-gradient(160deg, rgba(12, 18, 36, 0.96) 0%, rgba(14, 20, 40, 0.98) 100%);
   border: 1px solid rgba(92, 140, 255, 0.2);
   box-shadow:
     0 24px 60px rgba(6, 10, 20, 0.6),
     inset 0 1px 0 rgba(255, 255, 255, 0.03);
+}
+
+html[data-theme="banana"] .panel-glass {
+  background: linear-gradient(160deg, rgba(255, 250, 230, 0.98) 0%, rgba(255, 242, 207, 0.98) 100%);
+  border: 1px solid rgba(227, 164, 0, 0.25);
+  box-shadow:
+    0 18px 40px rgba(90, 60, 10, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.8);
 }
 
 .pill-button {

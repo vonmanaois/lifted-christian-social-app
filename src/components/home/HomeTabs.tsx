@@ -74,22 +74,25 @@ export default function HomeTabs() {
         </div>
       </div>
 
-      <div className="md:hidden flex items-center justify-end pt-2">
-        <button
-          type="button"
-          onClick={() => {
-            const next = activeTab === "Prayer Wall" ? "Word of the Day" : "Prayer Wall";
-            router.push(next === "Prayer Wall" ? "/" : "/wordoftheday");
-          }}
-          className="inline-flex items-center gap-2 rounded-lg border border-[color:var(--panel-border)] bg-[color:var(--panel)] px-3 py-2 text-xs font-semibold text-[color:var(--ink)] transition hover:text-[color:var(--accent)]"
-        >
-          {activeTab === "Prayer Wall" ? "Word of the Day" : "Prayer Wall"}
-          {activeTab === "Prayer Wall" ? (
-            <ArrowRight size={16} weight="regular" />
-          ) : (
-            <ArrowLeft size={16} weight="regular" />
-          )}
-        </button>
+      <div className="md:hidden w-full pt-2">
+        <div className="grid w-full grid-cols-2 rounded-xl border border-[color:var(--panel-border)] bg-[color:var(--panel)] p-1">
+          {tabs.map((tab) => (
+            <button
+              key={tab}
+              type="button"
+              onClick={() => {
+                router.push(tab === "Prayer Wall" ? "/" : "/wordoftheday");
+              }}
+              className={`w-full rounded-lg px-3 py-2 text-xs font-semibold transition ${
+                activeTab === tab
+                  ? "bg-[color:var(--accent)] text-[color:var(--accent-contrast)]"
+                  : "text-[color:var(--ink)] hover:text-[color:var(--accent)]"
+              }`}
+            >
+              {tab}
+            </button>
+          ))}
+        </div>
       </div>
 
       {activeTab === "Prayer Wall" ? <PrayerWall /> : <WordWall />}

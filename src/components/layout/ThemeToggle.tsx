@@ -9,6 +9,7 @@ const themes = [
   { value: "dark", label: "Dark" },
   { value: "midnight", label: "Midnight" },
   { value: "purple-rose", label: "Purple Rose" },
+  { value: "banana", label: "Banana" },
 ];
 
 export default function ThemeToggle() {
