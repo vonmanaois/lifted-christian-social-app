@@ -54,7 +54,7 @@ export default function ProfileHeader({
 
   return (
     <div>
-      <p className="text-3xl font-semibold text-[color:var(--ink)]">{name}</p>
+      <p className="text-2xl font-semibold text-[color:var(--ink)]">{name}</p>
       <p className="mt-2 text-sm text-[color:var(--subtle)]">@{username}</p>
       {bio ? (
         <p className="mt-2 text-sm text-[color:var(--ink)]">{bio}</p>

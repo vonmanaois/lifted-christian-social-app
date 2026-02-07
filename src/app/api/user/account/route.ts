@@ -4,10 +4,6 @@ import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import dbConnect from "@/lib/db";
 import UserModel from "@/models/User";
-import PrayerModel from "@/models/Prayer";
-import CommentModel from "@/models/Comment";
-import WordModel from "@/models/Word";
-import WordCommentModel from "@/models/WordComment";
 import NotificationModel from "@/models/Notification";
 
 export async function DELETE() {
@@ -26,31 +22,14 @@ export async function DELETE() {
   await dbConnect();
 
   await Promise.all([
-    UserModel.updateMany(
-      { followers: userObjectId },
-      { $pull: { followers: userObjectId } }
+    UserModel.updateOne(
+      { _id: userObjectId },
+      { $set: { deletionRequestedAt: new Date(), deletedAt: new Date() } }
     ),
-    UserModel.updateMany(
-      { following: userObjectId },
-      { $pull: { following: userObjectId } }
-    ),
-    PrayerModel.updateMany(
-      { prayedBy: userObjectId },
-      { $pull: { prayedBy: userObjectId } }
-    ),
-    WordModel.updateMany(
-      { likedBy: userObjectId },
-      { $pull: { likedBy: userObjectId } }
-    ),
-    CommentModel.deleteMany({ userId: userObjectId }),
-    WordCommentModel.deleteMany({ userId: userObjectId }),
-    PrayerModel.deleteMany({ userId: userObjectId }),
-    WordModel.deleteMany({ userId: userObjectId }),
     NotificationModel.deleteMany({
       $or: [{ userId: userObjectId }, { actorId: userObjectId }],
     }),
-    UserModel.deleteOne({ _id: userObjectId }),
   ]);
 
-  return NextResponse.json({ success: true });
+  return NextResponse.json({ success: true, gracePeriodDays: 30 });
 }

@@ -46,7 +46,7 @@ export default async function ProfilePage() {
               initialUsername={user?.username ?? "username"}
               initialBio={user?.bio ?? null}
             />
-            <div className="h-24 w-24 rounded-full overflow-hidden border border-slate-200 bg-slate-200">
+            <div className="h-16 w-16 rounded-full overflow-hidden border border-slate-200 bg-slate-200">
               {user?.image || session.user.image ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img

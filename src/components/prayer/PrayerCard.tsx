@@ -356,6 +356,9 @@ export default function PrayerCard({ prayer }: PrayerCardProps) {
     onSuccess: (data) => {
       setCount(data.count);
       setHasPrayed(true);
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new Event("stats:refresh"));
+      }
     },
   });
 
@@ -572,7 +575,7 @@ export default function PrayerCard({ prayer }: PrayerCardProps) {
             </div>
           </div>
         ) : (
-          <p className="mt-4 text-sm leading-relaxed text-[color:var(--ink)]">
+          <p className="mt-4 text-[13px] sm:text-sm leading-relaxed text-[color:var(--ink)]">
             {content}
           </p>
         )}
@@ -586,7 +589,7 @@ export default function PrayerCard({ prayer }: PrayerCardProps) {
               type="button"
               onClick={handlePray}
               disabled={!session?.user?.id || isPending || hasPrayed}
-              className={`pill-button inline-flex items-center justify-center rounded-lg transition-colors ${
+              className={`pill-button inline-flex items-center justify-center gap-2 rounded-lg transition-colors ${
                 hasPrayed
                   ? "cursor-not-allowed text-[color:var(--accent-strong)] opacity-60"
                   : "cursor-pointer text-[color:var(--accent)] hover:text-[color:var(--accent-strong)]"
@@ -598,6 +601,9 @@ export default function PrayerCard({ prayer }: PrayerCardProps) {
                 weight={hasPrayed ? "fill" : "regular"}
                 className={hasPrayed ? "text-[color:var(--accent-strong)]" : undefined}
               />
+              <span className="text-xs font-semibold">
+                {hasPrayed ? "Prayed" : "Pray"}
+              </span>
             </button>
           )}
           <button

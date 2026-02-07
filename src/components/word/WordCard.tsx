@@ -101,6 +101,7 @@ export default function WordCard({ word }: WordCardProps) {
   const [showMenu, setShowMenu] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showEditConfirm, setShowEditConfirm] = useState(false);
+  const [showSignIn, setShowSignIn] = useState(false);
   const [showCommentConfirm, setShowCommentConfirm] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [content, setContent] = useState(word.content);
@@ -205,7 +206,7 @@ export default function WordCard({ word }: WordCardProps) {
           // ignore JSON parse errors
         }
         if (response.status === 401) {
-          signIn("google");
+          setShowSignIn(true);
         }
         throw new Error(message);
       }
@@ -235,6 +236,9 @@ export default function WordCard({ word }: WordCardProps) {
         body: JSON.stringify({ wordId, content: commentText.trim() }),
       });
       if (!response.ok) {
+        if (response.status === 401) {
+          setShowSignIn(true);
+        }
         throw new Error("Failed to post comment");
       }
     },
@@ -272,6 +276,9 @@ export default function WordCard({ word }: WordCardProps) {
         method: "DELETE",
       });
       if (!response.ok) {
+        if (response.status === 401) {
+          setShowSignIn(true);
+        }
         throw new Error("Failed to delete comment");
       }
     },
@@ -296,6 +303,9 @@ export default function WordCard({ word }: WordCardProps) {
           if (data?.error) message = data.error;
         } catch {
           // ignore JSON parse errors
+        }
+        if (response.status === 401) {
+          setShowSignIn(true);
         }
         throw new Error(message);
       }
@@ -322,7 +332,7 @@ export default function WordCard({ word }: WordCardProps) {
           // ignore JSON parse errors
         }
         if (response.status === 401) {
-          signIn("google");
+          setShowSignIn(true);
         }
         throw new Error(message);
       }
@@ -350,7 +360,7 @@ export default function WordCard({ word }: WordCardProps) {
 
   const handleLike = async () => {
     if (!session?.user?.id) {
-      signIn("google");
+      setShowSignIn(true);
       return;
     }
 
@@ -375,7 +385,7 @@ export default function WordCard({ word }: WordCardProps) {
     event.preventDefault();
 
     if (!session?.user?.id) {
-      signIn("google");
+      setShowSignIn(true);
       return;
     }
 
@@ -527,7 +537,7 @@ export default function WordCard({ word }: WordCardProps) {
             </div>
           </div>
         ) : (
-          <p className="mt-4 text-sm leading-relaxed text-[color:var(--ink)]">
+          <p className="mt-4 text-[13px] sm:text-sm leading-relaxed text-[color:var(--ink)]">
             {content}
           </p>
         )}
@@ -574,23 +584,25 @@ export default function WordCard({ word }: WordCardProps) {
 
         {showComments && (
           <div className="mt-5 border-t border-slate-100 pt-4" ref={commentFormRef}>
-            <form onSubmit={handleCommentSubmit} className="flex flex-col gap-3">
-              <textarea
-                className="soft-input comment-input min-h-[70px] text-sm"
-                placeholder="Write a comment..."
-                value={commentText}
-                ref={commentInputRef}
-                onChange={(event) => setCommentText(event.target.value)}
-              />
-              <div className="flex justify-end">
-                <button
-                  type="submit"
-                  className="rounded-lg px-3 py-2 text-xs font-semibold bg-[color:var(--accent)] text-[color:var(--accent-contrast)] cursor-pointer"
-                >
-                  Post comment
-                </button>
-              </div>
-            </form>
+            {session?.user?.id && (
+              <form onSubmit={handleCommentSubmit} className="flex flex-col gap-3">
+                <textarea
+                  className="soft-input comment-input min-h-[70px] text-sm"
+                  placeholder="Write a comment..."
+                  value={commentText}
+                  ref={commentInputRef}
+                  onChange={(event) => setCommentText(event.target.value)}
+                />
+                <div className="flex justify-end">
+                  <button
+                    type="submit"
+                    className="rounded-lg px-3 py-2 text-xs font-semibold bg-[color:var(--accent)] text-[color:var(--accent-contrast)] cursor-pointer"
+                  >
+                    Post comment
+                  </button>
+                </div>
+              </form>
+            )}
 
             <div className="mt-4 flex flex-col gap-3 text-sm">
               {isLoadingComments ? (
@@ -854,6 +866,23 @@ export default function WordCard({ word }: WordCardProps) {
             Discard
           </button>
         </div>
+      </Modal>
+
+      <Modal
+        title="Sign in"
+        isOpen={showSignIn}
+        onClose={() => setShowSignIn(false)}
+      >
+        <p className="text-sm text-[color:var(--subtle)]">
+          Sign in with Google to interact with words.
+        </p>
+        <button
+          type="button"
+          onClick={() => signIn("google")}
+          className="mt-4 pill-button bg-slate-900 text-white cursor-pointer inline-flex items-center gap-2"
+        >
+          Continue with Google
+        </button>
       </Modal>
 
       <Modal

@@ -3,6 +3,8 @@ import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import clientPromise from "@/lib/mongodb";
 import { ObjectId } from "mongodb";
+import PrayerModel from "@/models/Prayer";
+import dbConnect from "@/lib/db";
 
 const usernameRegex = /^[a-z0-9_]{3,20}$/;
 
@@ -53,6 +55,7 @@ export async function PATCH(req: Request) {
         username,
         name,
         bio: bio.slice(0, 280),
+        onboardingComplete: true,
       },
     }
   );
@@ -74,16 +77,31 @@ export async function GET(req: Request) {
   const db = client.db();
 
   if (usernameParam) {
+    await dbConnect();
     const user = await db.collection("users").findOne({ username: usernameParam });
     if (!user) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
+    let prayersLiftedCount =
+      typeof user.prayersLiftedCount === "number" ? user.prayersLiftedCount : null;
+
+    if (user._id) {
+      const count = await PrayerModel.countDocuments({ prayedBy: user._id });
+      prayersLiftedCount = count;
+      if (user.prayersLiftedCount !== count) {
+        await db
+          .collection("users")
+          .updateOne({ _id: user._id }, { $set: { prayersLiftedCount: count } });
+      }
+    }
+
     return NextResponse.json({
       name: user.name ?? null,
       username: user.username ?? null,
       bio: user.bio ?? null,
       followersCount: Array.isArray(user.followers) ? user.followers.length : 0,
       followingCount: Array.isArray(user.following) ? user.following.length : 0,
+      prayersLiftedCount: typeof prayersLiftedCount === "number" ? prayersLiftedCount : 0,
     });
   }
 
@@ -104,6 +122,19 @@ export async function GET(req: Request) {
         : { _id: session.user.id };
 
   const user = await db.collection("users").findOne(userFilter);
+  let prayersLiftedCount =
+    typeof user?.prayersLiftedCount === "number" ? user.prayersLiftedCount : null;
+
+  if (user?._id) {
+    const count = await PrayerModel.countDocuments({ prayedBy: user._id });
+    prayersLiftedCount = count;
+    if (user.prayersLiftedCount !== count) {
+      await db.collection("users").updateOne(
+        { _id: user._id },
+        { $set: { prayersLiftedCount: count } }
+      );
+    }
+  }
 
   return NextResponse.json({
     name: user?.name ?? null,
@@ -111,5 +142,6 @@ export async function GET(req: Request) {
     bio: user?.bio ?? null,
     followersCount: Array.isArray(user?.followers) ? user.followers.length : 0,
     followingCount: Array.isArray(user?.following) ? user.following.length : 0,
+    prayersLiftedCount: typeof prayersLiftedCount === "number" ? prayersLiftedCount : 0,
   });
 }

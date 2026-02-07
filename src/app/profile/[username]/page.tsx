@@ -51,13 +51,7 @@ export default async function PublicProfilePage({
               usernameParam={user?.username ?? null}
             />
             <div className="flex items-center gap-4">
-              {!isSelf && (
-                <FollowButton
-                  targetUserId={user._id.toString()}
-                  initialFollowing={isFollowing}
-                />
-              )}
-              <div className="h-24 w-24 rounded-full overflow-hidden border border-slate-200 bg-slate-200">
+              <div className="h-16 w-16 rounded-full overflow-hidden border border-slate-200 bg-slate-200">
                 {user?.image ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
@@ -69,6 +63,14 @@ export default async function PublicProfilePage({
               </div>
             </div>
           </div>
+          {!isSelf && (
+            <div className="mt-4 w-full">
+              <FollowButton
+                targetUserId={user._id.toString()}
+                initialFollowing={isFollowing}
+              />
+            </div>
+          )}
 
           <ProfileStats
             initialPrayedCount={prayedCount}

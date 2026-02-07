@@ -129,7 +129,7 @@ h3 {
 .panel {
   background: var(--panel);
   border: 1px solid var(--panel-border);
-  border-radius: 22px;
+  border-radius: 10px;
   box-shadow: 0 1px 0 rgba(16, 17, 20, 0.04);
 }
 
@@ -216,6 +216,9 @@ html[data-theme="midnight"] .panel-glass {
   border-radius: 0;
   padding: 0;
   overflow: visible;
+  min-height: calc(100vh - 180px);
+  display: flex;
+  flex-direction: column;
 }
 
 .feed-form {

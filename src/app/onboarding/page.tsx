@@ -17,7 +17,7 @@ export default async function OnboardingPage() {
   await dbConnect();
   const user = await UserModel.findById(session.user.id).lean();
 
-  if (user?.username) {
+  if (user?.onboardingComplete) {
     redirect("/");
   }
 

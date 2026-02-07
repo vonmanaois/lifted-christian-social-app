@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useSession } from "next-auth/react";
+import { signIn, useSession } from "next-auth/react";
 import WordForm from "@/components/word/WordForm";
 import WordFeed from "@/components/word/WordFeed";
 import Modal from "@/components/layout/Modal";
@@ -9,13 +9,21 @@ import Modal from "@/components/layout/Modal";
 export default function WordWall() {
   const [refreshKey, setRefreshKey] = useState(0);
   const [showComposer, setShowComposer] = useState(false);
-  const { data: session } = useSession();
+  const [showSignIn, setShowSignIn] = useState(false);
+  const { data: session, status } = useSession();
+  const isAuthenticated = status === "authenticated";
 
   return (
     <section className="feed-surface">
       <button
         type="button"
-        onClick={() => setShowComposer(true)}
+        onClick={() => {
+          if (!isAuthenticated) {
+            setShowSignIn(true);
+            return;
+          }
+          setShowComposer(true);
+        }}
         className="composer-trigger cursor-pointer"
       >
         <span className="inline-flex items-center gap-2">
@@ -31,7 +39,7 @@ export default function WordWall() {
               (session?.user?.name?.[0] ?? "U").toUpperCase()
             )}
           </span>
-          Share God&apos;s word today
+          {isAuthenticated ? "Share God&apos;s word today" : "Sign in to post a word"}
         </span>
       </button>
       <WordFeed refreshKey={refreshKey} />
@@ -47,6 +55,23 @@ export default function WordWall() {
             setShowComposer(false);
           }}
         />
+      </Modal>
+
+      <Modal
+        title="Sign in"
+        isOpen={showSignIn}
+        onClose={() => setShowSignIn(false)}
+      >
+        <p className="text-sm text-[color:var(--subtle)]">
+          Sign in with Google to post a word.
+        </p>
+        <button
+          type="button"
+          onClick={() => signIn("google")}
+          className="mt-4 pill-button bg-slate-900 text-white cursor-pointer inline-flex items-center gap-2"
+        >
+          Continue with Google
+        </button>
       </Modal>
     </section>
   );

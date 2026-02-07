@@ -66,7 +66,7 @@ export default function HomeTabs() {
         </div>
       </div>
 
-      <div className="md:hidden flex items-center justify-end">
+      <div className="md:hidden flex items-center justify-end pt-2">
         <button
           type="button"
           onClick={() => {

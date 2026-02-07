@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { signIn, useSession } from "next-auth/react";
+import { useSession } from "next-auth/react";
 
 type FollowButtonProps = {
   targetUserId: string;
@@ -18,7 +18,6 @@ export default function FollowButton({
 
   const handleFollow = async () => {
     if (!session?.user?.id) {
-      signIn("google");
       return;
     }
 
@@ -54,15 +53,17 @@ export default function FollowButton({
     }
   };
 
+  if (!session?.user?.id) return null;
+
   return (
     <button
       type="button"
       onClick={handleFollow}
       disabled={isUpdating}
-      className={`pill-button border text-sm cursor-pointer ${
+      className={`post-button w-full sm:w-auto cursor-pointer ${
         isFollowing
-          ? "border-slate-200 text-[color:var(--ink)]"
-          : "border-transparent bg-[color:var(--accent)] text-[color:var(--accent-contrast)]"
+          ? "bg-transparent border border-[color:var(--panel-border)] text-[color:var(--ink)]"
+          : "bg-[color:var(--accent)] text-[color:var(--accent-contrast)]"
       }`}
     >
       {isFollowing ? "Following" : "Follow"}

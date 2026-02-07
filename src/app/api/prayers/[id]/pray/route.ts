@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth";
 import dbConnect from "@/lib/db";
 import NotificationModel from "@/models/Notification";
 import PrayerModel from "@/models/Prayer";
+import UserModel from "@/models/User";
 
 export async function POST(
   _req: Request,
@@ -42,6 +43,10 @@ export async function POST(
 
   const updated = await PrayerModel.findByIdAndUpdate(prayer.id, update, {
     new: true,
+  });
+
+  await UserModel.findByIdAndUpdate(userId, {
+    $inc: { prayersLiftedCount: 1 },
   });
 
   if (!alreadyPrayed && prayer.userId?.toString() !== userId) {

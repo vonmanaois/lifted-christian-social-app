@@ -12,6 +12,7 @@ type ProfileStatsProps = {
 type ProfilePayload = {
   followersCount?: number;
   followingCount?: number;
+  prayersLiftedCount?: number;
 };
 
 export default function ProfileStats({
@@ -22,6 +23,7 @@ export default function ProfileStats({
 }: ProfileStatsProps) {
   const [followersCount, setFollowersCount] = useState(initialFollowersCount);
   const [followingCount, setFollowingCount] = useState(initialFollowingCount);
+  const [prayersLiftedCount, setPrayersLiftedCount] = useState(initialPrayedCount);
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
@@ -40,6 +42,9 @@ export default function ProfileStats({
         if (typeof data.followingCount === "number") {
           setFollowingCount(data.followingCount);
         }
+        if (typeof data.prayersLiftedCount === "number") {
+          setPrayersLiftedCount(data.prayersLiftedCount);
+        }
       } catch (error) {
         console.error(error);
       } finally {
@@ -54,10 +59,18 @@ export default function ProfileStats({
       }
     };
 
+    const refreshListener = () => {
+      loadStats();
+    };
+
     window.addEventListener("follow:updated", listener);
+    window.addEventListener("stats:refresh", refreshListener);
     loadStats();
 
-    return () => window.removeEventListener("follow:updated", listener);
+    return () => {
+      window.removeEventListener("follow:updated", listener);
+      window.removeEventListener("stats:refresh", refreshListener);
+    };
   }, [usernameParam]);
 
   return (
@@ -65,7 +78,7 @@ export default function ProfileStats({
       <div className="flex flex-col">
         <span>Prayers lifted</span>
         <span className="text-lg font-semibold text-[color:var(--ink)]">
-          {initialPrayedCount}
+          {prayersLiftedCount}
         </span>
       </div>
       <div className="flex flex-col">

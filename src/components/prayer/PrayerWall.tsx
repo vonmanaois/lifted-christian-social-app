@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useSession } from "next-auth/react";
+import { signIn, useSession } from "next-auth/react";
 import PostForm from "@/components/prayer/PostForm";
 import PrayerFeed from "@/components/prayer/PrayerFeed";
 import Modal from "@/components/layout/Modal";
@@ -9,21 +9,33 @@ import Modal from "@/components/layout/Modal";
 export default function PrayerWall() {
   const [refreshKey, setRefreshKey] = useState(0);
   const [showComposer, setShowComposer] = useState(false);
-  const { data: session } = useSession();
+  const [showSignIn, setShowSignIn] = useState(false);
+  const { data: session, status } = useSession();
+  const isAuthenticated = status === "authenticated";
 
   useEffect(() => {
     const handleOpenPrayer = () => {
+      if (!isAuthenticated) {
+        setShowSignIn(true);
+        return;
+      }
       setShowComposer(true);
     };
     window.addEventListener("open-prayer-composer", handleOpenPrayer);
     return () => window.removeEventListener("open-prayer-composer", handleOpenPrayer);
-  }, []);
+  }, [isAuthenticated]);
 
   return (
     <section className="feed-surface">
       <button
         type="button"
-        onClick={() => setShowComposer(true)}
+        onClick={() => {
+          if (!isAuthenticated) {
+            setShowSignIn(true);
+            return;
+          }
+          setShowComposer(true);
+        }}
         className="composer-trigger cursor-pointer"
       >
         <span className="inline-flex items-center gap-2">
@@ -39,7 +51,9 @@ export default function PrayerWall() {
               (session?.user?.name?.[0] ?? "U").toUpperCase()
             )}
           </span>
-          Write your new prayer request ...
+          {isAuthenticated
+            ? "Write your new prayer request ..."
+            : "Sign in to post a prayer"}
         </span>
       </button>
       <PrayerFeed refreshKey={refreshKey} />
@@ -55,6 +69,23 @@ export default function PrayerWall() {
             setShowComposer(false);
           }}
         />
+      </Modal>
+
+      <Modal
+        title="Sign in"
+        isOpen={showSignIn}
+        onClose={() => setShowSignIn(false)}
+      >
+        <p className="text-sm text-[color:var(--subtle)]">
+          Sign in with Google to post a prayer.
+        </p>
+        <button
+          type="button"
+          onClick={() => signIn("google")}
+          className="mt-4 pill-button bg-slate-900 text-white cursor-pointer inline-flex items-center gap-2"
+        >
+          Continue with Google
+        </button>
       </Modal>
     </section>
   );

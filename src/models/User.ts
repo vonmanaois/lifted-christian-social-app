@@ -20,6 +20,10 @@ const UserSchema = new Schema(
       enum: ["light", "dark", "midnight", "purple-rose"],
       default: "light",
     },
+    prayersLiftedCount: { type: Number, default: 0 },
+    deletionRequestedAt: { type: Date, default: null },
+    deletedAt: { type: Date, default: null },
+    onboardingComplete: { type: Boolean, default: false },
   },
   { timestamps: true }
 );

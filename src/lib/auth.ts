@@ -27,6 +27,9 @@ export const authOptions: NextAuthOptions = {
     async session({ session, user }) {
       if (session.user) {
         session.user.id = user.id;
+        session.user.name = user.name;
+        session.user.email = user.email;
+        session.user.image = user.image;
       }
       return session;
     },
@@ -36,7 +39,8 @@ export const authOptions: NextAuthOptions = {
       await dbConnect();
 
       const existing = await UserModel.findById(user.id).lean();
-      if (!existing || existing.username) return;
+      if (!existing) return;
+      if (existing.username) return;
 
       const base = (user.name || user.email || "user")
         .toLowerCase()
@@ -53,7 +57,24 @@ export const authOptions: NextAuthOptions = {
         candidate = `${base || "user"}${suffix}${extra}`;
       }
 
-      await UserModel.findByIdAndUpdate(user.id, { username: candidate });
+      await UserModel.findByIdAndUpdate(user.id, {
+        username: candidate,
+        onboardingComplete: false,
+      });
+    },
+    async signIn({ user }) {
+      await dbConnect();
+      const existing = await UserModel.findById(user.id).lean();
+      const shouldMarkOnboarded =
+        existing?.onboardingComplete === undefined && Boolean(existing?.username);
+
+      await UserModel.findByIdAndUpdate(user.id, {
+        $set: {
+          deletedAt: null,
+          deletionRequestedAt: null,
+          ...(shouldMarkOnboarded ? { onboardingComplete: true } : {}),
+        },
+      });
     },
   },
 };
