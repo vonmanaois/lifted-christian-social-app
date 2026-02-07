@@ -12,25 +12,34 @@ type UserResult = {
 
 export default function UserSearch() {
   const [query, setQuery] = useState("");
+  const [debouncedQuery, setDebouncedQuery] = useState("");
   const [results, setResults] = useState<UserResult[]>([]);
   const [isOpen, setIsOpen] = useState(false);
 
   useEffect(() => {
+    const id = setTimeout(() => {
+      setDebouncedQuery(query);
+    }, 350);
+    return () => clearTimeout(id);
+  }, [query]);
+
+  useEffect(() => {
     const run = async () => {
-      if (query.trim().length < 2) {
+      if (debouncedQuery.trim().length < 2) {
         setResults([]);
         return;
       }
 
-      const response = await fetch(`/api/users/search?q=${encodeURIComponent(query)}`);
+      const response = await fetch(
+        `/api/users/search?q=${encodeURIComponent(debouncedQuery)}`
+      );
       if (!response.ok) return;
       const data = (await response.json()) as UserResult[];
       setResults(data);
     };
 
-    const id = setTimeout(run, 200);
-    return () => clearTimeout(id);
-  }, [query]);
+    run();
+  }, [debouncedQuery]);
 
   return (
     <div className="relative">

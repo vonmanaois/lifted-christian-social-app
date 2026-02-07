@@ -5,6 +5,7 @@ import dbConnect from "@/lib/db";
 import WordCommentModel from "@/models/WordComment";
 import NotificationModel from "@/models/Notification";
 import WordModel from "@/models/Word";
+import { z } from "zod";
 
 export async function POST(req: Request) {
   const session = await getServerSession(authOptions);
@@ -13,9 +14,21 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const body = await req.json();
-  const content = typeof body.content === "string" ? body.content.trim() : "";
-  const wordId = typeof body.wordId === "string" ? body.wordId : "";
+  const WordCommentSchema = z.object({
+    content: z.string().trim().min(1).max(1000),
+    wordId: z.string().min(1),
+  });
+
+  const body = WordCommentSchema.safeParse(await req.json());
+  if (!body.success) {
+    return NextResponse.json(
+      { error: "Word ID and content are required" },
+      { status: 400 }
+    );
+  }
+
+  const content = body.data.content.trim();
+  const wordId = body.data.wordId;
 
   if (!content || !wordId) {
     return NextResponse.json(

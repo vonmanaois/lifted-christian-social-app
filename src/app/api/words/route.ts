@@ -6,6 +6,7 @@ import WordModel from "@/models/Word";
 import WordCommentModel from "@/models/WordComment";
 import { Types } from "mongoose";
 import { revalidateTag, unstable_cache } from "next/cache";
+import { z } from "zod";
 
 export async function GET(req: Request) {
   const session = await getServerSession(authOptions);
@@ -118,8 +119,16 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const body = await req.json();
-  const content = typeof body.content === "string" ? body.content.trim() : "";
+  const WordSchema = z.object({
+    content: z.string().trim().min(1).max(2000),
+  });
+
+  const body = WordSchema.safeParse(await req.json());
+  if (!body.success) {
+    return NextResponse.json({ error: "Invalid word data" }, { status: 400 });
+  }
+
+  const content = body.data.content.trim();
 
   if (!content) {
     return NextResponse.json({ error: "Content is required" }, { status: 400 });

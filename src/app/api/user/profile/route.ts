@@ -5,6 +5,7 @@ import clientPromise from "@/lib/mongodb";
 import { ObjectId } from "mongodb";
 import PrayerModel from "@/models/Prayer";
 import dbConnect from "@/lib/db";
+import { z } from "zod";
 
 const usernameRegex = /^[a-z0-9_]{3,20}$/;
 
@@ -15,10 +16,20 @@ export async function PATCH(req: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const body = await req.json();
-  const username = typeof body.username === "string" ? body.username.trim() : "";
-  const name = typeof body.name === "string" ? body.name.trim() : "";
-  const bio = typeof body.bio === "string" ? body.bio.trim() : "";
+  const ProfileSchema = z.object({
+    username: z.string().trim().min(3).max(20),
+    name: z.string().trim().max(100).optional().or(z.literal("")),
+    bio: z.string().trim().max(280).optional().or(z.literal("")),
+  });
+
+  const body = ProfileSchema.safeParse(await req.json());
+  if (!body.success) {
+    return NextResponse.json({ error: "Invalid profile data" }, { status: 400 });
+  }
+
+  const username = body.data.username.trim();
+  const name = (body.data.name ?? "").trim();
+  const bio = (body.data.bio ?? "").trim();
 
   if (!usernameRegex.test(username)) {
     return NextResponse.json(

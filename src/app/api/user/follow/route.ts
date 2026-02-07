@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth";
 import dbConnect from "@/lib/db";
 import UserModel from "@/models/User";
 import NotificationModel from "@/models/Notification";
+import { z } from "zod";
 
 export async function POST(req: Request) {
   try {
@@ -13,8 +14,16 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const body = await req.json();
-    const targetUserId = typeof body.userId === "string" ? body.userId : "";
+    const FollowSchema = z.object({
+      userId: z.string().min(1),
+    });
+
+    const body = FollowSchema.safeParse(await req.json());
+    if (!body.success) {
+      return NextResponse.json({ error: "Invalid user" }, { status: 400 });
+    }
+
+    const targetUserId = body.data.userId;
 
     if (!targetUserId || targetUserId === session.user.id) {
       return NextResponse.json({ error: "Invalid user" }, { status: 400 });

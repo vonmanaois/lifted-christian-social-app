@@ -6,6 +6,7 @@ import CommentModel from "@/models/Comment";
 import PrayerModel from "@/models/Prayer";
 import { Types } from "mongoose";
 import { revalidateTag, unstable_cache } from "next/cache";
+import { z } from "zod";
 
 export async function GET(req: Request) {
   const session = await getServerSession(authOptions);
@@ -116,11 +117,20 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const body = await req.json();
-  const content = typeof body.content === "string" ? body.content.trim() : "";
-  const isAnonymous = Boolean(body.isAnonymous);
-  const expiresInDays =
-    body.expiresInDays === "never" ? "never" : body.expiresInDays === 30 ? 30 : 7;
+  const PrayerSchema = z.object({
+    content: z.string().trim().min(1).max(2000),
+    isAnonymous: z.boolean().optional(),
+    expiresInDays: z.union([z.literal(7), z.literal(30), z.literal("never")]).optional(),
+  });
+
+  const body = PrayerSchema.safeParse(await req.json());
+  if (!body.success) {
+    return NextResponse.json({ error: "Invalid prayer data" }, { status: 400 });
+  }
+
+  const content = body.data.content.trim();
+  const isAnonymous = Boolean(body.data.isAnonymous);
+  const expiresInDays = body.data.expiresInDays ?? 7;
 
   if (!content) {
     return NextResponse.json({ error: "Content is required" }, { status: 400 });

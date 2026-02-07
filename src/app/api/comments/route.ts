@@ -6,6 +6,7 @@ import dbConnect from "@/lib/db";
 import CommentModel from "@/models/Comment";
 import NotificationModel from "@/models/Notification";
 import PrayerModel from "@/models/Prayer";
+import { z } from "zod";
 
 export async function POST(req: Request) {
   const session = await getServerSession(authOptions);
@@ -14,9 +15,21 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const body = await req.json();
-  const content = typeof body.content === "string" ? body.content.trim() : "";
-  const rawPrayerId = typeof body.prayerId === "string" ? body.prayerId : "";
+  const CommentSchema = z.object({
+    content: z.string().trim().min(1).max(1000),
+    prayerId: z.string().min(1),
+  });
+
+  const body = CommentSchema.safeParse(await req.json());
+  if (!body.success) {
+    return NextResponse.json(
+      { error: "Prayer ID and content are required" },
+      { status: 400 }
+    );
+  }
+
+  const content = body.data.content.trim();
+  const rawPrayerId = body.data.prayerId;
   const cleanedPrayerId = rawPrayerId.replace(/^ObjectId\\(\"(.+)\"\\)$/, "$1");
   const prayerObjectId = Types.ObjectId.isValid(cleanedPrayerId)
     ? new Types.ObjectId(cleanedPrayerId)
