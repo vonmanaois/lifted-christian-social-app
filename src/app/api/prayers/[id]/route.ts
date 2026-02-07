@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth";
 import dbConnect from "@/lib/db";
 import PrayerModel from "@/models/Prayer";
 import CommentModel from "@/models/Comment";
+import { revalidateTag } from "next/cache";
 
 export async function DELETE(
   _req: Request,
@@ -30,6 +31,7 @@ export async function DELETE(
   await CommentModel.deleteMany({ prayerId: prayer._id });
   await PrayerModel.deleteOne({ _id: prayer._id });
 
+  revalidateTag("prayers-feed");
   return NextResponse.json({ ok: true });
 }
 
@@ -65,5 +67,6 @@ export async function PUT(
   prayer.content = content;
   await prayer.save();
 
+  revalidateTag("prayers-feed");
   return NextResponse.json({ ok: true, content: prayer.content });
 }

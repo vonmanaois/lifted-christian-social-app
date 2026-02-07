@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth";
 import dbConnect from "@/lib/db";
 import WordModel from "@/models/Word";
 import WordCommentModel from "@/models/WordComment";
+import { revalidateTag } from "next/cache";
 
 export async function DELETE(
   _req: Request,
@@ -30,6 +31,7 @@ export async function DELETE(
   await WordCommentModel.deleteMany({ wordId: word._id });
   await WordModel.deleteOne({ _id: word._id });
 
+  revalidateTag("words-feed");
   return NextResponse.json({ ok: true });
 }
 
@@ -65,5 +67,6 @@ export async function PUT(
   word.content = content;
   await word.save();
 
+  revalidateTag("words-feed");
   return NextResponse.json({ ok: true, content: word.content });
 }
