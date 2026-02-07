@@ -32,6 +32,14 @@ export default function HomeTabs() {
     return () => window.removeEventListener("open-prayer-composer", handleOpenPrayer);
   }, [router]);
 
+  useEffect(() => {
+    const handleOpenWord = () => {
+      router.push("/wordoftheday");
+    };
+    window.addEventListener("open-word-composer", handleOpenWord);
+    return () => window.removeEventListener("open-word-composer", handleOpenWord);
+  }, [router]);
+
   return (
     <section className="flex flex-col gap-6">
       <div className="hidden md:flex items-center justify-between">
@@ -73,7 +81,7 @@ export default function HomeTabs() {
             const next = activeTab === "Prayer Wall" ? "Word of the Day" : "Prayer Wall";
             router.push(next === "Prayer Wall" ? "/" : "/wordoftheday");
           }}
-          className="inline-flex items-center gap-2 rounded-lg border border-[color:var(--panel-border)] bg-[color:var(--panel)] px-3 py-2 text-sm font-semibold text-[color:var(--ink)] transition hover:text-[color:var(--accent)]"
+          className="inline-flex items-center gap-2 rounded-lg border border-[color:var(--panel-border)] bg-[color:var(--panel)] px-3 py-2 text-xs font-semibold text-[color:var(--ink)] transition hover:text-[color:var(--accent)]"
         >
           {activeTab === "Prayer Wall" ? "Word of the Day" : "Prayer Wall"}
           {activeTab === "Prayer Wall" ? (

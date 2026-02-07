@@ -21,7 +21,9 @@ export default function FollowButton({
       return;
     }
 
+    const previousFollowing = isFollowing;
     setIsUpdating(true);
+    setIsFollowing((prev) => !prev);
 
     try {
       const response = await fetch("/api/user/follow", {
@@ -30,14 +32,23 @@ export default function FollowButton({
         body: JSON.stringify({ userId: targetUserId }),
       });
 
-      if (!response.ok) {
-        throw new Error("Failed to update follow status");
-      }
-
-      const data = (await response.json()) as {
+      const data = (await response.json().catch(() => null)) as {
         following: boolean;
         followersCount?: number;
-      };
+        error?: string;
+      } | null;
+
+      if (!response.ok) {
+        console.error(
+          "Failed to update follow status",
+          response.status,
+          data?.error
+        );
+        setIsFollowing(previousFollowing);
+        return;
+      }
+
+      if (!data) return;
       setIsFollowing(data.following);
       if (typeof data.followersCount === "number") {
         window.dispatchEvent(
@@ -45,6 +56,9 @@ export default function FollowButton({
             detail: { followersCount: data.followersCount },
           })
         );
+      }
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new Event("notifications:refresh"));
       }
     } catch (error) {
       console.error(error);

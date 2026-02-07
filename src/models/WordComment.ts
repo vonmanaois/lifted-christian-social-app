@@ -9,6 +9,8 @@ const WordCommentSchema = new Schema(
   { timestamps: { createdAt: true, updatedAt: false } }
 );
 
+WordCommentSchema.index({ wordId: 1, createdAt: -1 });
+
 export type WordComment = InferSchemaType<typeof WordCommentSchema>;
 
 const WordCommentModel =

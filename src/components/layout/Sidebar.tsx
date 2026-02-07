@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { signIn, signOut, useSession } from "next-auth/react";
 import { usePathname, useRouter } from "next/navigation";
 import {
@@ -29,6 +29,52 @@ export default function Sidebar() {
   const router = useRouter();
   const pathname = usePathname();
   const queryClient = useQueryClient();
+
+  const { data: notificationsCount = 0 } = useQuery({
+    queryKey: ["notifications", "count"],
+    queryFn: async () => {
+      const response = await fetch("/api/notifications", { cache: "no-store" });
+      if (!response.ok) {
+        throw new Error("Failed to load notifications");
+      }
+      const data = (await response.json()) as Array<unknown>;
+      return Array.isArray(data) ? data.length : 0;
+    },
+    enabled: isAuthenticated,
+    refetchInterval: 30000,
+  });
+
+  useEffect(() => {
+    const refresh = () => {
+      queryClient.invalidateQueries({ queryKey: ["notifications", "count"] });
+    };
+    window.addEventListener("notifications:refresh", refresh);
+    return () => window.removeEventListener("notifications:refresh", refresh);
+  }, [queryClient]);
+
+  useEffect(() => {
+    if (!isAuthenticated || typeof window === "undefined") return;
+    const source = new EventSource("/api/notifications/stream");
+
+    source.onmessage = (event) => {
+      try {
+        const payload = JSON.parse(event.data) as { count?: number };
+        if (typeof payload.count === "number") {
+          queryClient.setQueryData(["notifications", "count"], payload.count);
+        }
+      } catch {
+        // ignore parse errors
+      }
+    };
+
+    source.onerror = () => {
+      source.close();
+    };
+
+    return () => {
+      source.close();
+    };
+  }, [isAuthenticated, queryClient]);
 
   const openNotifications = () => {
     if (!isAuthenticated) {
@@ -83,14 +129,14 @@ export default function Sidebar() {
   return (
     <>
       <div className="lg:hidden sticky top-0 z-40 bg-[color:var(--panel)]/95 backdrop-blur">
-        <div className="relative flex items-center justify-center px-4 py-4">
+        <div className="relative flex items-center justify-center px-4 py-3">
           <button
             type="button"
             onClick={() => router.push("/")}
             className="flex items-center gap-2 cursor-pointer"
           >
-            <div className="h-10 w-10 rounded-full bg-gradient-to-br from-[#2d6cdf] to-[#9b6cff]" />
-            <span className="text-base font-semibold text-[color:var(--ink)]">
+            <div className="h-9 w-9 rounded-full bg-gradient-to-br from-[#2d6cdf] to-[#9b6cff]" />
+            <span className="text-sm font-semibold text-[color:var(--ink)]">
               Lifted
             </span>
           </button>
@@ -98,10 +144,10 @@ export default function Sidebar() {
             type="button"
             ref={mobilePrefsButtonRef}
             onClick={() => setShowThemes((prev) => !prev)}
-            className="absolute right-4 top-1/2 -translate-y-1/2 h-9 w-9 rounded-xl bg-[color:var(--panel)] text-[color:var(--ink)] hover:text-[color:var(--accent)]"
+            className="absolute right-4 top-1/2 -translate-y-1/2 h-8 w-8 rounded-xl bg-[color:var(--panel)] text-[color:var(--ink)] hover:text-[color:var(--accent)]"
             aria-label="Preferences"
           >
-            <SlidersHorizontal size={20} weight="regular" />
+            <SlidersHorizontal size={18} weight="regular" />
           </button>
         </div>
         {showThemes && (
@@ -213,7 +259,11 @@ export default function Sidebar() {
             return;
           }
           if (typeof window !== "undefined") {
-            window.dispatchEvent(new CustomEvent("open-prayer-composer"));
+            const eventName =
+              pathname === "/wordoftheday" || pathname === "/word"
+                ? "open-word-composer"
+                : "open-prayer-composer";
+            window.dispatchEvent(new CustomEvent(eventName));
           }
         }}
         className="flex items-center gap-3 cursor-pointer text-[color:var(--ink)] hover:text-[color:var(--accent)]"
@@ -221,7 +271,7 @@ export default function Sidebar() {
           <span className="h-10 w-10 rounded-2xl bg-[color:var(--accent)] text-[color:var(--accent-contrast)] flex items-center justify-center">
             <Plus size={22} weight="regular" />
           </span>
-          <span className="hidden lg:inline">Add a Prayer</span>
+          <span className="hidden lg:inline">Add</span>
         </button>
         <button
           type="button"
@@ -229,8 +279,11 @@ export default function Sidebar() {
           aria-label="Notifications"
           onClick={openNotifications}
         >
-          <span className="h-10 w-10 rounded-2xl bg-[color:var(--panel)] flex items-center justify-center">
+          <span className="relative h-10 w-10 rounded-2xl bg-[color:var(--panel)] flex items-center justify-center">
             <BellSimple size={22} weight="regular" />
+            {isAuthenticated && notificationsCount > 0 && (
+              <span className="absolute -top-1 -right-1 h-2.5 w-2.5 rounded-full bg-[color:var(--accent)]" />
+            )}
           </span>
           <span className="hidden lg:inline">Notifications</span>
         </button>
@@ -315,11 +368,15 @@ export default function Sidebar() {
       </aside>
 
       <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-40 border-t border-[color:var(--panel-border)] bg-[color:var(--panel)]/95 backdrop-blur">
-        <div className="flex items-center justify-around px-5 py-4 text-[color:var(--ink)]">
+        <div className="flex items-center justify-around px-5 py-3 text-[color:var(--ink)]">
           <button
             type="button"
             className="flex flex-col items-center gap-1 text-[color:var(--ink)] hover:text-[color:var(--accent)]"
-            onClick={() => router.push("/")}
+            onClick={() => {
+              router.push("/");
+              queryClient.invalidateQueries({ queryKey: ["prayers"] });
+              queryClient.invalidateQueries({ queryKey: ["words"] });
+            }}
           >
             <House size={24} weight="regular" />
           </button>
@@ -344,7 +401,11 @@ export default function Sidebar() {
             type="button"
             onClick={() => {
               if (typeof window !== "undefined") {
-                window.dispatchEvent(new CustomEvent("open-prayer-composer"));
+                const eventName =
+                  pathname === "/wordoftheday" || pathname === "/word"
+                    ? "open-word-composer"
+                    : "open-prayer-composer";
+                window.dispatchEvent(new CustomEvent(eventName));
               }
             }}
             className="flex flex-col items-center gap-1 text-[color:var(--accent)]"
@@ -357,7 +418,12 @@ export default function Sidebar() {
             className="flex flex-col items-center gap-1 text-[color:var(--ink)] hover:text-[color:var(--accent)]"
             onClick={openNotifications}
           >
-            <BellSimple size={24} weight="regular" />
+            <span className="relative">
+              <BellSimple size={24} weight="regular" />
+              {isAuthenticated && notificationsCount > 0 && (
+                <span className="absolute -top-1 -right-1 h-2.5 w-2.5 rounded-full bg-[color:var(--accent)]" />
+              )}
+            </span>
           </button>
           <button
             type="button"

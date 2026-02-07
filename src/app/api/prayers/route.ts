@@ -4,29 +4,49 @@ import { authOptions } from "@/lib/auth";
 import dbConnect from "@/lib/db";
 import CommentModel from "@/models/Comment";
 import PrayerModel from "@/models/Prayer";
+import { Types } from "mongoose";
 
 export async function GET(req: Request) {
   const session = await getServerSession(authOptions);
   const { searchParams } = new URL(req.url);
   const userId = searchParams.get("userId");
+  const cursor = searchParams.get("cursor");
+  const limitParam = Number(searchParams.get("limit") ?? 20);
+  const limit = Number.isFinite(limitParam) ? Math.min(Math.max(limitParam, 1), 50) : 20;
 
   await dbConnect();
 
   const isOwnerView = Boolean(session?.user?.id && userId && session.user.id === userId);
-  const filter = userId
+  const filter: Record<string, unknown> = userId
     ? isOwnerView
       ? { userId }
       : { userId, isAnonymous: false }
     : {};
 
+  if (cursor) {
+    const decoded = Buffer.from(cursor, "base64").toString("utf8");
+    const [createdAtRaw, idRaw] = decoded.split("|");
+    const createdAt = createdAtRaw ? new Date(createdAtRaw) : null;
+    const cursorId = idRaw && Types.ObjectId.isValid(idRaw) ? new Types.ObjectId(idRaw) : null;
+    if (createdAt && !Number.isNaN(createdAt.getTime())) {
+      filter.$or = [
+        { createdAt: { $lt: createdAt } },
+        ...(cursorId ? [{ createdAt, _id: { $lt: cursorId } }] : []),
+      ];
+    }
+  }
+
   const prayers = await PrayerModel.find(filter)
-    .sort({ createdAt: -1 })
-    .limit(50)
+    .sort({ createdAt: -1, _id: -1 })
+    .limit(limit + 1)
     .populate("userId", "name image username")
     .lean();
 
+  const hasMore = prayers.length > limit;
+  const items = hasMore ? prayers.slice(0, limit) : prayers;
+
   const sanitized = await Promise.all(
-    prayers.map(async (prayer) => {
+    items.map(async (prayer) => {
       const { userId: userRef, ...rest } = prayer as typeof prayer & {
         userId?: { name?: string; image?: string; username?: string; _id?: { toString: () => string } } | null;
       };
@@ -69,7 +89,12 @@ export async function GET(req: Request) {
     })
   );
 
-  return NextResponse.json(sanitized);
+  const last = items[items.length - 1];
+  const nextCursor = hasMore && last
+    ? Buffer.from(`${new Date(last.createdAt).toISOString()}|${last._id.toString()}`).toString("base64")
+    : null;
+
+  return NextResponse.json({ items: sanitized, nextCursor });
 }
 
 export async function POST(req: Request) {

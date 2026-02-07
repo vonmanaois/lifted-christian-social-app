@@ -242,6 +242,21 @@ html[data-theme="midnight"] .panel-glass {
   cursor: text;
 }
 
+@media (max-width: 640px) {
+  .wall-card {
+    padding: 14px;
+  }
+
+  .composer-trigger {
+    padding: 12px 14px;
+    font-size: 0.85rem;
+  }
+
+  .feed-surface {
+    min-height: calc(100vh - 140px);
+  }
+}
+
 .composer-trigger:hover {
   border-color: var(--panel-border);
   color: var(--subtle);

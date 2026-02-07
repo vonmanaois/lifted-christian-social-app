@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { signIn, useSession } from "next-auth/react";
 import WordForm from "@/components/word/WordForm";
 import WordFeed from "@/components/word/WordFeed";
@@ -12,6 +12,18 @@ export default function WordWall() {
   const [showSignIn, setShowSignIn] = useState(false);
   const { data: session, status } = useSession();
   const isAuthenticated = status === "authenticated";
+
+  useEffect(() => {
+    const handleOpenWord = () => {
+      if (!isAuthenticated) {
+        setShowSignIn(true);
+        return;
+      }
+      setShowComposer(true);
+    };
+    window.addEventListener("open-word-composer", handleOpenWord);
+    return () => window.removeEventListener("open-word-composer", handleOpenWord);
+  }, [isAuthenticated]);
 
   return (
     <section className="feed-surface">

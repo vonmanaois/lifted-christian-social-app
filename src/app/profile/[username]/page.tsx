@@ -43,14 +43,14 @@ export default async function PublicProfilePage({
       <div className="page-grid">
         <Sidebar />
         <div className="panel p-8 rounded-none">
-          <div className="flex flex-wrap items-center justify-between gap-6">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <ProfileHeader
               initialName={user?.name ?? "User"}
               initialUsername={user?.username ?? "username"}
               initialBio={user?.bio ?? null}
               usernameParam={user?.username ?? null}
             />
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-4 self-end sm:self-auto">
               <div className="h-16 w-16 rounded-full overflow-hidden border border-slate-200 bg-slate-200">
                 {user?.image ? (
                   // eslint-disable-next-line @next/next/no-img-element

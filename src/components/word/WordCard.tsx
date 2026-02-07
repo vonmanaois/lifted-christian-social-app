@@ -210,21 +210,32 @@ export default function WordCard({ word }: WordCardProps) {
         }
         throw new Error(message);
       }
-      return (await response.json()) as { count: number };
+      return (await response.json()) as { count: number; liked?: boolean };
     },
     onMutate: async () => {
-      if (!session?.user?.id) return;
+      if (!session?.user?.id) return { previousCount: likeCount, previousLiked: hasLiked };
+      const previousCount = likeCount;
+      const previousLiked = hasLiked;
       setLikeBurst(true);
       setTimeout(() => setLikeBurst(false), 180);
       setHasLiked((prev) => !prev);
-      setLikeCount((prev) => (hasLiked ? Math.max(0, prev - 1) : prev + 1));
+      setLikeCount((prev) => (previousLiked ? Math.max(0, prev - 1) : prev + 1));
+      return { previousCount, previousLiked };
     },
-    onError: () => {
-      setHasLiked((prev) => !prev);
-      setLikeCount((prev) => (hasLiked ? prev + 1 : Math.max(0, prev - 1)));
+    onError: (_error, _variables, context) => {
+      if (context) {
+        setHasLiked(context.previousLiked);
+        setLikeCount(context.previousCount);
+      }
     },
     onSuccess: (data) => {
+      if (typeof data.liked === "boolean") {
+        setHasLiked(data.liked);
+      }
       setLikeCount(data.count ?? 0);
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new Event("notifications:refresh"));
+      }
     },
   });
 
@@ -244,9 +255,13 @@ export default function WordCard({ word }: WordCardProps) {
     },
     onSuccess: async () => {
       setCommentText("");
+      setCommentCount((prev) => prev + 1);
       await queryClient.invalidateQueries({
         queryKey: ["word-comments", wordId],
       });
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new Event("notifications:refresh"));
+      }
     },
   });
 
@@ -286,6 +301,7 @@ export default function WordCard({ word }: WordCardProps) {
       await queryClient.invalidateQueries({
         queryKey: ["word-comments", wordId],
       });
+      setCommentCount((prev) => Math.max(0, prev - 1));
     },
   });
 
@@ -466,15 +482,15 @@ export default function WordCard({ word }: WordCardProps) {
       <div className="flex-1">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <p className="text-sm font-semibold text-[color:var(--ink)]">
+            <p className="text-xs sm:text-sm font-semibold text-[color:var(--ink)]">
               {word.user?.name ?? "User"}
             </p>
-            <p className="text-xs text-[color:var(--subtle)]">
+            <p className="text-[11px] sm:text-xs text-[color:var(--subtle)]">
               {word.user?.username ? `@${word.user.username}` : ""}
             </p>
           </div>
           <div className="flex items-center gap-2">
-            <p className="text-xs text-[color:var(--subtle)]">
+            <p className="text-[11px] sm:text-xs text-[color:var(--subtle)]">
               {formatPostTime(word.createdAt)}
             </p>
             {isOwner && (
@@ -587,7 +603,7 @@ export default function WordCard({ word }: WordCardProps) {
             {session?.user?.id && (
               <form onSubmit={handleCommentSubmit} className="flex flex-col gap-3">
                 <textarea
-                  className="soft-input comment-input min-h-[70px] text-sm"
+                  className="soft-input comment-input min-h-[60px] sm:min-h-[70px] text-sm"
                   placeholder="Write a comment..."
                   value={commentText}
                   ref={commentInputRef}
@@ -604,7 +620,7 @@ export default function WordCard({ word }: WordCardProps) {
               </form>
             )}
 
-            <div className="mt-4 flex flex-col gap-3 text-sm">
+            <div className="mt-4 flex flex-col gap-3 text-[13px] sm:text-sm">
               {isLoadingComments ? (
                 <div className="flex flex-col gap-3">
                   {Array.from({ length: 2 }).map((_, index) => (
@@ -618,7 +634,9 @@ export default function WordCard({ word }: WordCardProps) {
                   ))}
                 </div>
               ) : comments.length === 0 ? (
-                <div className="text-[color:var(--subtle)]">No comments yet.</div>
+                <div className="text-[color:var(--subtle)] text-[13px] sm:text-sm">
+                  No comments yet.
+                </div>
               ) : (
                 comments.map((comment, index) => {
                   const commentOwnerId = comment.userId?._id
@@ -641,7 +659,7 @@ export default function WordCard({ word }: WordCardProps) {
                           ? `/profile/${comment.userId.username}`
                           : "/profile"
                       }
-                      className="h-9 w-9 rounded-full bg-slate-200 flex items-center justify-center text-xs font-semibold text-slate-500 cursor-pointer overflow-hidden"
+                      className="h-8 w-8 sm:h-9 sm:w-9 rounded-full bg-slate-200 flex items-center justify-center text-[11px] sm:text-xs font-semibold text-slate-500 cursor-pointer overflow-hidden"
                     >
                       {comment.userId?.image ? (
                         <Image
@@ -664,16 +682,16 @@ export default function WordCard({ word }: WordCardProps) {
                                 ? `/profile/${comment.userId.username}`
                                 : "/profile"
                             }
-                            className="text-xs font-semibold text-[color:var(--ink)] cursor-pointer hover:underline"
+                            className="text-[11px] sm:text-xs font-semibold text-[color:var(--ink)] cursor-pointer hover:underline"
                           >
                             {comment.userId?.name ?? "User"}
                           </a>
                           {comment.userId?.username && (
-                            <span className="text-xs text-[color:var(--subtle)]">
+                            <span className="text-[11px] sm:text-xs text-[color:var(--subtle)]">
                               @{comment.userId.username}
                             </span>
                           )}
-                          <p className="text-xs text-[color:var(--subtle)]">
+                          <p className="text-[11px] sm:text-xs text-[color:var(--subtle)]">
                             {formatPostTime(comment.createdAt)}
                           </p>
                         </div>
@@ -724,7 +742,7 @@ export default function WordCard({ word }: WordCardProps) {
                       {editingCommentId === comment._id ? (
                         <div ref={commentEditRef} className="mt-2 flex flex-col gap-2">
                           <textarea
-                            className="soft-input comment-input min-h-[60px] text-sm"
+                            className="soft-input comment-input min-h-[56px] sm:min-h-[60px] text-sm"
                             value={editingCommentText}
                             onChange={(event) => setEditingCommentText(event.target.value)}
                           />
@@ -756,7 +774,7 @@ export default function WordCard({ word }: WordCardProps) {
                           </div>
                         </div>
                       ) : (
-                        <p className="mt-1 text-sm text-[color:var(--ink)]">
+                        <p className="mt-1 text-[13px] sm:text-sm text-[color:var(--ink)]">
                           {comment.content}
                         </p>
                       )}

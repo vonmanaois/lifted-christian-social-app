@@ -1,13 +1,13 @@
  "use client";
 
- import { useQuery } from "@tanstack/react-query";
+ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
  import { signIn, useSession } from "next-auth/react";
  import Sidebar from "@/components/layout/Sidebar";
 
  type NotificationActor = { name?: string | null; image?: string | null };
  type NotificationItem = {
    _id: string;
-   type: "pray" | "comment" | "word_like" | "word_comment";
+   type: "pray" | "comment" | "word_like" | "word_comment" | "follow";
    createdAt: string;
    actorId?: NotificationActor | null;
    prayerId?: { content?: string } | null;
@@ -17,6 +17,7 @@
  export default function NotificationsPage() {
    const { status } = useSession();
    const isAuthenticated = status === "authenticated";
+   const queryClient = useQueryClient();
 
    const { data: notifications = [], isLoading } = useQuery({
      queryKey: ["notifications"],
@@ -30,17 +31,43 @@
      enabled: isAuthenticated,
    });
 
+   const clearMutation = useMutation({
+     mutationFn: async () => {
+       const response = await fetch("/api/notifications", { method: "DELETE" });
+       if (!response.ok) {
+         throw new Error("Failed to clear notifications");
+       }
+     },
+     onSuccess: () => {
+       queryClient.invalidateQueries({ queryKey: ["notifications"] });
+       queryClient.invalidateQueries({ queryKey: ["notifications", "count"] });
+     },
+   });
+
    return (
      <main className="container">
        <div className="page-grid">
          <Sidebar />
          <div className="panel p-8 rounded-none">
-           <h1 className="text-xl font-semibold text-[color:var(--ink)]">
-             Notifications
-           </h1>
-           <p className="mt-1 text-sm text-[color:var(--subtle)]">
-             Stay updated when someone interacts with your prayers or words.
-           </p>
+           <div className="flex flex-wrap items-center justify-between gap-3">
+             <div>
+               <h1 className="text-xl font-semibold text-[color:var(--ink)]">
+                 Notifications
+               </h1>
+               <p className="mt-1 text-sm text-[color:var(--subtle)]">
+                 Stay updated when someone interacts with your prayers or words.
+               </p>
+             </div>
+             {isAuthenticated && notifications.length > 0 && (
+               <button
+                 type="button"
+                 onClick={() => clearMutation.mutate()}
+                 className="post-button bg-transparent border border-[color:var(--panel-border)] text-[color:var(--ink)]"
+               >
+                 Clear all
+               </button>
+             )}
+           </div>
 
            {!isAuthenticated ? (
              <div className="mt-6 panel p-4 text-sm text-[color:var(--subtle)]">
@@ -85,7 +112,9 @@
                          ? "commented on your prayer."
                          : note.type === "word_like"
                            ? "liked your word."
-                           : "commented on your word."}
+                           : note.type === "word_comment"
+                             ? "commented on your word."
+                             : "followed you."}
                    </p>
                    {note.prayerId?.content && (
                      <p className="mt-2 text-xs text-[color:var(--subtle)] line-clamp-2">

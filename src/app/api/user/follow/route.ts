@@ -1,77 +1,76 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
-import clientPromise from "@/lib/mongodb";
-import { ObjectId } from "mongodb";
+import dbConnect from "@/lib/db";
+import UserModel from "@/models/User";
+import NotificationModel from "@/models/Notification";
 
 export async function POST(req: Request) {
-  const session = await getServerSession(authOptions);
+  try {
+    const session = await getServerSession(authOptions);
 
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const body = await req.json();
+    const targetUserId = typeof body.userId === "string" ? body.userId : "";
+
+    if (!targetUserId || targetUserId === session.user.id) {
+      return NextResponse.json({ error: "Invalid user" }, { status: 400 });
+    }
+
+    await dbConnect();
+
+    const currentUser = await UserModel.findById(session.user.id);
+    const targetUser = await UserModel.findById(targetUserId);
+
+    if (!currentUser || !targetUser) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    }
+
+    const isFollowing = Array.isArray(currentUser.following)
+      ? currentUser.following.some((id) => id.toString() === targetUserId)
+      : false;
+
+    if (isFollowing) {
+      await UserModel.updateOne(
+        { _id: currentUser._id },
+        { $pull: { following: targetUser._id } }
+      );
+      await UserModel.updateOne(
+        { _id: targetUser._id },
+        { $pull: { followers: currentUser._id } }
+      );
+    } else {
+      await UserModel.updateOne(
+        { _id: currentUser._id },
+        { $addToSet: { following: targetUser._id } }
+      );
+      await UserModel.updateOne(
+        { _id: targetUser._id },
+        { $addToSet: { followers: currentUser._id } }
+      );
+
+      NotificationModel.create({
+        userId: targetUser._id,
+        actorId: currentUser._id,
+        type: "follow",
+      }).catch((error) => {
+        console.error("[follow-notification]", error);
+      });
+    }
+
+    const updatedTarget = await UserModel.findById(targetUser._id);
+
+    return NextResponse.json({
+      following: !isFollowing,
+      followersCount: Array.isArray(updatedTarget?.followers)
+        ? updatedTarget.followers.length
+        : 0,
+    });
+  } catch (error) {
+    console.error("[follow]", error);
+    return NextResponse.json({ error: "Failed to update follow status" }, { status: 500 });
   }
-
-  const body = await req.json();
-  const targetUserId = typeof body.userId === "string" ? body.userId : "";
-
-  if (!targetUserId || targetUserId === session.user.id) {
-    return NextResponse.json({ error: "Invalid user" }, { status: 400 });
-  }
-
-  const client = await clientPromise;
-  const db = client.db();
-
-  const currentUserId = ObjectId.isValid(session.user.id)
-    ? new ObjectId(session.user.id)
-    : null;
-  const targetId = ObjectId.isValid(targetUserId)
-    ? new ObjectId(targetUserId)
-    : null;
-
-  if (!targetId) {
-    return NextResponse.json({ error: "Invalid user" }, { status: 400 });
-  }
-
-  const currentUser = currentUserId
-    ? await db.collection("users").findOne({ _id: currentUserId })
-    : await db.collection("users").findOne({ email: session.user.email });
-
-  const targetUser = await db.collection("users").findOne({ _id: targetId });
-
-  if (!currentUser || !targetUser) {
-    return NextResponse.json({ error: "User not found" }, { status: 404 });
-  }
-
-  const isFollowing = Array.isArray(currentUser.following)
-    ? currentUser.following.some((id: ObjectId) => id.toString() === targetUserId)
-    : false;
-
-  if (isFollowing) {
-    await db.collection("users").updateOne(
-      { _id: currentUser._id },
-      { $pull: { following: targetId } }
-    );
-    await db.collection("users").updateOne(
-      { _id: targetId },
-      { $pull: { followers: currentUser._id } }
-    );
-  } else {
-    await db.collection("users").updateOne(
-      { _id: currentUser._id },
-      { $addToSet: { following: targetId } }
-    );
-    await db.collection("users").updateOne(
-      { _id: targetId },
-      { $addToSet: { followers: currentUser._id } }
-    );
-  }
-
-  const updatedTarget = await db.collection("users").findOne({ _id: targetId });
-
-  return NextResponse.json({
-    following: !isFollowing,
-    followersCount: Array.isArray(updatedTarget?.followers)
-      ? updatedTarget.followers.length
-      : 0,
-  });
 }

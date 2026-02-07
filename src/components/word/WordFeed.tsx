@@ -1,6 +1,6 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { useInfiniteQuery } from "@tanstack/react-query";
 import WordCard from "@/components/word/WordCard";
 
 type Word = {
@@ -18,16 +18,32 @@ type WordFeedProps = {
 };
 
 export default function WordFeed({ refreshKey, userId }: WordFeedProps) {
-  const { data: words = [], isLoading, isFetching } = useQuery({
+  const {
+    data,
+    isLoading,
+    isFetching,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  } = useInfiniteQuery({
     queryKey: ["words", userId, refreshKey],
-    queryFn: async () => {
-      const query = userId ? `?userId=${userId}` : "";
-      const response = await fetch(`/api/words${query}`, { cache: "no-store" });
+    queryFn: async ({ pageParam }: { pageParam?: string | null }) => {
+      const params = new URLSearchParams();
+      if (userId) params.set("userId", userId);
+      if (pageParam) params.set("cursor", pageParam);
+      params.set("limit", "20");
+
+      const response = await fetch(`/api/words?${params.toString()}`, {
+        cache: "no-store",
+      });
       if (!response.ok) {
         throw new Error("Failed to load words");
       }
-      const data = (await response.json()) as Word[];
-      return data.map((word) => ({
+      const data = (await response.json()) as {
+        items: Word[];
+        nextCursor?: string | null;
+      };
+      const items = data.items.map((word) => ({
         ...word,
         _id:
           typeof word._id === "string"
@@ -35,8 +51,15 @@ export default function WordFeed({ refreshKey, userId }: WordFeedProps) {
             : String((word._id as { $oid?: string })?.$oid ?? word._id),
         userId: word.userId ? String(word.userId) : null,
       }));
+      return { items, nextCursor: data.nextCursor ?? null };
     },
+    getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
+    initialPageParam: null,
+    staleTime: 10000,
+    refetchOnWindowFocus: true,
   });
+
+  const words = data?.pages.flatMap((page) => page.items) ?? [];
 
   if (isLoading) {
     return (
@@ -79,6 +102,16 @@ export default function WordFeed({ refreshKey, userId }: WordFeedProps) {
       {words.map((word) => (
         <WordCard key={word._id} word={word} />
       ))}
+      {hasNextPage && (
+        <button
+          type="button"
+          onClick={() => fetchNextPage()}
+          disabled={isFetchingNextPage}
+          className="mt-4 post-button bg-transparent border border-[color:var(--panel-border)] text-[color:var(--ink)]"
+        >
+          {isFetchingNextPage ? "Loading..." : "Load more"}
+        </button>
+      )}
     </div>
   );
 }

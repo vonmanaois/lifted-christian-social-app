@@ -9,6 +9,10 @@ const WordSchema = new Schema(
   { timestamps: true }
 );
 
+WordSchema.index({ createdAt: -1 });
+WordSchema.index({ userId: 1, createdAt: -1 });
+WordSchema.index({ likedBy: 1 });
+
 export type Word = InferSchemaType<typeof WordSchema>;
 
 const WordModel = (models.Word as Model<Word>) || model<Word>("Word", WordSchema);

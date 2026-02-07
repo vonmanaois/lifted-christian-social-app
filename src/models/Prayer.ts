@@ -12,6 +12,10 @@ const PrayerSchema = new Schema(
 );
 
 PrayerSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
+PrayerSchema.index({ createdAt: -1 });
+PrayerSchema.index({ userId: 1, createdAt: -1 });
+PrayerSchema.index({ userId: 1, isAnonymous: 1, createdAt: -1 });
+PrayerSchema.index({ prayedBy: 1 });
 
 export type Prayer = InferSchemaType<typeof PrayerSchema> & {
   _id: Types.ObjectId;

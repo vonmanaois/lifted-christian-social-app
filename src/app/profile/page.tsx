@@ -40,13 +40,13 @@ export default async function ProfilePage() {
               <ProfileSettings required currentName={user?.name ?? null} />
             </div>
           )}
-          <div className="flex flex-wrap items-center justify-between gap-6">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <ProfileHeader
               initialName={user?.name ?? session.user.name ?? "Your Name"}
               initialUsername={user?.username ?? "username"}
               initialBio={user?.bio ?? null}
             />
-            <div className="h-16 w-16 rounded-full overflow-hidden border border-slate-200 bg-slate-200">
+            <div className="h-16 w-16 self-end sm:self-auto rounded-full overflow-hidden border border-slate-200 bg-slate-200">
               {user?.image || session.user.image ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img

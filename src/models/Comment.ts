@@ -9,6 +9,8 @@ const CommentSchema = new Schema(
   { timestamps: { createdAt: true, updatedAt: false } }
 );
 
+CommentSchema.index({ prayerId: 1, createdAt: -1 });
+
 export type Comment = InferSchemaType<typeof CommentSchema>;
 
 const CommentModel =

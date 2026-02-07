@@ -6,11 +6,18 @@ const NotificationSchema = new Schema(
     actorId: { type: Schema.Types.ObjectId, ref: "User", required: true },
     prayerId: { type: Schema.Types.ObjectId, ref: "Prayer" },
     wordId: { type: Schema.Types.ObjectId, ref: "Word" },
-    type: { type: String, enum: ["pray", "comment", "word_like", "word_comment"], required: true },
+    type: {
+      type: String,
+      enum: ["pray", "comment", "word_like", "word_comment", "follow"],
+      required: true,
+    },
     readAt: { type: Date, default: null },
   },
   { timestamps: { createdAt: true, updatedAt: false } }
 );
+
+NotificationSchema.index({ userId: 1, createdAt: -1 });
+NotificationSchema.index({ userId: 1, readAt: 1 });
 
 export type Notification = InferSchemaType<typeof NotificationSchema>;
 

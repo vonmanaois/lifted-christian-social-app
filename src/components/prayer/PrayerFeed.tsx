@@ -1,6 +1,6 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { useInfiniteQuery } from "@tanstack/react-query";
 import PrayerCard, { type Prayer } from "@/components/prayer/PrayerCard";
 
 type PrayerFeedProps = {
@@ -9,16 +9,32 @@ type PrayerFeedProps = {
 };
 
 export default function PrayerFeed({ refreshKey, userId }: PrayerFeedProps) {
-  const { data: prayers = [], isLoading, isFetching } = useQuery({
+  const {
+    data,
+    isLoading,
+    isFetching,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  } = useInfiniteQuery({
     queryKey: ["prayers", userId, refreshKey],
-    queryFn: async () => {
-      const query = userId ? `?userId=${userId}` : "";
-      const response = await fetch(`/api/prayers${query}`, { cache: "no-store" });
+    queryFn: async ({ pageParam }: { pageParam?: string | null }) => {
+      const params = new URLSearchParams();
+      if (userId) params.set("userId", userId);
+      if (pageParam) params.set("cursor", pageParam);
+      params.set("limit", "20");
+
+      const response = await fetch(`/api/prayers?${params.toString()}`, {
+        cache: "no-store",
+      });
       if (!response.ok) {
         throw new Error("Failed to load prayers");
       }
-      const data = (await response.json()) as Prayer[];
-      return data.map((prayer) => ({
+      const data = (await response.json()) as {
+        items: Prayer[];
+        nextCursor?: string | null;
+      };
+      const items = data.items.map((prayer) => ({
         ...prayer,
         _id:
           typeof prayer._id === "string"
@@ -29,8 +45,15 @@ export default function PrayerFeed({ refreshKey, userId }: PrayerFeedProps) {
           : [],
         userId: prayer.userId ? String(prayer.userId) : null,
       }));
+      return { items, nextCursor: data.nextCursor ?? null };
     },
+    getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
+    initialPageParam: null,
+    staleTime: 10000,
+    refetchOnWindowFocus: true,
   });
+
+  const prayers = data?.pages.flatMap((page) => page.items) ?? [];
 
   if (isLoading) {
     return (
@@ -73,6 +96,16 @@ export default function PrayerFeed({ refreshKey, userId }: PrayerFeedProps) {
       {prayers.map((prayer) => (
         <PrayerCard key={prayer._id} prayer={prayer} />
       ))}
+      {hasNextPage && (
+        <button
+          type="button"
+          onClick={() => fetchNextPage()}
+          disabled={isFetchingNextPage}
+          className="mt-4 post-button bg-transparent border border-[color:var(--panel-border)] text-[color:var(--ink)]"
+        >
+          {isFetchingNextPage ? "Loading..." : "Load more"}
+        </button>
+      )}
     </div>
   );
 }
